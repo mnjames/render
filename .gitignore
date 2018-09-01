@@ -1,1 +1,5 @@
 books/*/*
+output/*/*
+
+# Ignore Mac files
+.DS_Store

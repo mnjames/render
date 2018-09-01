@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [ $# == 0 ]; then
+    echo "The 'book' argument is required."
+    exit
+fi
+
+echo "Pre-processing files..."
+if [ ! -d output/$1 ]; then
+  mkdir output/$1
+fi
+cd packages && lua preprocess.lua $1
