@@ -1,0 +1,4 @@
+#! /bin/bash
+
+echo "Building lexicon mappings..."
+cd packages && lua create-lexicon.lua
