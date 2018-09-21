@@ -17,12 +17,13 @@ local lom = require "lomwithpos"
 local lexiconMap = require "resources.lexicon-map"
 
 local inputDir = "../books/"..book
-local outputDir = "../output/"..book
+local outputDir = ".."
 
 local buildOrder = {
   "interlinear",
   "ssv-lit",
-  "ssv"
+  "ssv",
+  "notes"
 }
 
 function getAttr (attr)
@@ -36,9 +37,25 @@ function getAttr (attr)
   return str
 end
 
+local counter = 0
 function deparse (xml)
   if type(xml) ~= "table" then
     return xml
+  end
+  if xml.tag == "chapter" and tonumber(xml.attr.number) > 1 then return ""
+  -- elseif xml.tag == "interlinear" or xml.tag == "ssv-lit" or xml.tag == "ssv" then
+  --   counter = counter + 1
+  --   if counter > 3*12 then
+  --     return ""
+  --   end
+  -- elseif xml.tag == "note" then return "<note>This is an english note</note>"
+  end
+  if not xml.tag then
+    for a, b in pairs(xml) do
+      if type(b) == "table" then print(a, b.tag)
+      else print(a, b)
+      end
+    end
   end
   local str = "<"..xml.tag..getAttr(xml.attr)
   if (#xml == 0) then
@@ -52,11 +69,52 @@ function deparse (xml)
   return str
 end
 
+function splitSection (obj)
+  local split1 = {
+    attr = obj.attr,
+    tag = obj.tag
+  }
+  local split2 = {
+    attr = {
+      "number",
+      "type",
+      number = tonumber(obj.attr.number) + 0.5,
+      type = obj.attr.type
+    },
+    tag = obj.tag
+  }
+  local breakPoint = #obj / 2
+  for i, child in ipairs(obj) do
+    if i < breakPoint then table.insert(split1, child)
+    else table.insert(split2, child)
+    end
+  end
+  return {
+    split1,
+    split2
+  }
+end
+
 function createNested (parent, child, tag, index)
   local nested = {
-    attr = child.attr,
-    tag = child.tag
+    attr = {
+      "number",
+      "type",
+      number = child.attr.number,
+      type = tag
+    },
+    tag = "section"
   }
+  if tag == "verse" then
+    table.insert(nested, {
+      attr = child.attr,
+      tag = child.tag
+    })
+  end
+  -- local nested = {
+  --   attr = child.attr,
+  --   tag = child.tag
+  -- }
   for i = index, #parent do
     if parent[i].tag == tag or parent[i].tag == "chapter" then
       return i - 1, nested
@@ -64,6 +122,7 @@ function createNested (parent, child, tag, index)
     table.insert(nested, parent[i])
   end
   return #parent, nested
+  -- return #parent, splitSection(nested)
 end
 
 function nest (xml, tag)
@@ -84,6 +143,8 @@ function nest (xml, tag)
       i, child = createNested(xml, child, tag, i + 1)
     end
     table.insert(nested, child)
+    -- table.insert(nested, child[1])
+    -- table.insert(nested, child[2])
   end
   return nested
 end
@@ -147,6 +208,34 @@ function getNext (tag, index, xml)
   }
 end
 
+function getNextType (type, index, xml)
+  if not xml then
+    return {
+      index = index,
+      value = nil
+    }
+  end
+  local extra = {}
+  local child
+  for i = index, #xml do
+    child = xml[i]
+    if child.tag == "section" and child.attr.type == type then
+      if #extra == 0 then extra = nil end
+      return {
+        extra = extra,
+        index = i,
+        value = child
+      }
+    else
+      table.insert(extra, child)
+    end
+  end
+  return {
+    index = index,
+    value = nil
+  }
+end
+
 function normalize (children)
   local keepGoing = false
   local numbers = {}
@@ -181,38 +270,49 @@ end
 
 function combineChapter (xmls)
   local valid = getFirst(xmls)
+  -- local combined = {
+  --   attr = valid.attr,
+  --   tag = valid.tag
+  -- }
   local combined = {
-    attr = valid.attr,
-    tag = valid.tag
+    attr = {
+      "number",
+      number = valid.attr.number
+    },
+    tag = "chapter"
   }
   local children = {}
   for i = 1, #xmls do children[i] = {index = 1} end
   while true do
     for i, xml in ipairs(xmls) do
-      children[i] = getNext("verse", children[i].index, xml)
+      children[i] = getNextType("verse", children[i].index, xml)
     end
     valid = normalize(children)
     if not valid then break end
-    local verse = {
-      attr = {
-        "number",
-        number = valid.attr.number
-      },
-      tag = "verse"
-    }
+    -- local verse = {
+    --   attr = {
+    --     "number",
+    --     "type",
+    --     number = valid.attr.number,
+    --     type = "verse"
+    --   },
+    --   tag = "section"
+    -- }
     for i, child in ipairs(children) do
       if child.value then
         child.index = child.index + 1
         child.value.tag = buildOrder[i]
+        child.value.attr = {}
         if child.extra then
           for extraIndex, extraInsert in ipairs(child.extra) do
             table.insert(child.value, extraIndex, extraInsert)
           end
         end
-        table.insert(verse, child.value)
+        table.insert(combined, child.value)
+        -- table.insert(verse, child.value)
       end
     end
-    table.insert(combined, verse)
+    -- table.insert(combined, verse)
   end
   return combined
 end
@@ -220,14 +320,23 @@ end
 function combine (xmls)
   local ssv = xmls[3]
   local combined = {
-    attr = ssv.attr,
-    tag = ssv.tag
+    attr = {
+      "class",
+      "version",
+      class = "sections",
+      version = "2.5"
+    },
+    tag = "sile"
   }
+  -- local combined = {
+  --   attr = ssv.attr,
+  --   tag = ssv.tag
+  -- }
   local ssvChild
   local i = 1
   while true do
     ssvChild = ssv[i]
-    if ssvChild.tag == "chapter" then break end
+    if ssvChild.tag == "section" then break end
     table.insert(combined, ssvChild)
     i = i + 1
   end
@@ -236,7 +345,7 @@ function combine (xmls)
   for i = 1, #xmls do children[i] = {index = 1} end
   while true do
     for i, xml in ipairs(xmls) do
-      children[i] = getNext("chapter", children[i].index, xml)
+      children[i] = getNextType("chapter", children[i].index, xml)
     end
     if not normalize(children) then break end
     local sections = {}
@@ -299,7 +408,7 @@ function buildLink (cluster, map)
       "greek",
       "vernacular",
       greek = greek,
-      vernacular = vernacular
+      vernacular = string.gsub(vernacular, "-", " ")
     },
     tag = "item"
   }
@@ -323,17 +432,21 @@ function buildInterlinear (inter, map)
         chapters[chapter] = {
           attr = {
             "number",
-            number = chapter
+            "type",
+            number = chapter,
+            type = "chapter"
           },
-          tag = "chapter"
+          tag = "section"
         }
       end
       verseTable = {
         attr = {
           "number",
-          number = verse
+          "type",
+          number = verse,
+          type = "verse"
         },
-        tag = "verse"
+        tag = "section"
       }
       for j, cluster in ipairs(verseData) do
         if cluster.tag == "Cluster" then
@@ -344,7 +457,43 @@ function buildInterlinear (inter, map)
     end
   end
   return chapters
-  -- return map["aa85WCbr"]
+end
+
+function buildNotes (ssv)
+  local xml = {
+    attr = {},
+    tag = "usx"
+  }
+  for i, chapter in ipairs(ssv) do
+    if chapter.tag == "section" then
+      local chapterSection = {
+        attr = chapter.attr,
+        tag = chapter.tag
+      }
+      for j, verse in ipairs(chapter) do
+        if verse.tag == "section" then
+          local verseSection = {
+            attr = verse.attr,
+            tag = verse.tag
+          }
+          for k, note in ipairs(verse) do
+            if note.tag == "note" then
+              verse[k] = {
+                attr = {},
+                tag = "notemark"
+              }
+              for _, content in ipairs(note) do
+                table.insert(verseSection, content)
+              end
+            end
+          end
+          table.insert(chapterSection, verseSection)
+        end
+      end
+      table.insert(xml, chapterSection)
+    end
+  end
+  return xml
 end
 
 clock("Begin")
@@ -353,15 +502,29 @@ local ssv = lom.parse(base.readFile(inputDir.."/SSV.xml"))
 local inter = lom.parse(base.readFile(inputDir.."/Interlinear.xml"))
 clock("Build XML")
 
-ssv = flip(ssv)
 ssvLit = flip(ssvLit)
--- inter = buildInterlinear(inter, lexiconMap)
+ssv = flip(ssv)
 
-base.writeFile(outputDir.."/prepared-interlinear.xml", deparse(inter))
-base.writeFile(outputDir.."/prepared-ssv_lit.xml", deparse(ssvLit))
-base.writeFile(outputDir.."/prepared-ssv.xml", deparse(ssv))
+-- local notes = buildNotes(ssv)
+
+-- inter = buildInterlinear(inter, lexiconMap)
+-- base.writeFile(inputDir.."/Interlinear.xml", deparse(inter))
+
+-- outputDir = "../output/"..book
+-- base.writeFile(outputDir.."/prepared-interlinear.xml", deparse(inter))
+-- base.writeFile(outputDir.."/prepared-ssv_lit.xml", deparse(ssvLit))
+-- base.writeFile(outputDir.."/prepared-ssv.xml", deparse(ssv))
+-- base.writeFile(outputDir.."/prepared-notes.xml", deparse(notes))
+-- base.writeFile(outputDir.."/prepared.xml", deparse(combine({
+--   inter,
+--   ssvLit,
+--   ssv,
+--   notes
+-- })))
+
 base.writeFile(outputDir.."/prepared.xml", deparse(combine({
   inter,
   ssvLit,
-  ssv
+  ssv,
+  -- notes
 })))

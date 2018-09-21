@@ -1,3 +1,4 @@
+-- Shamelessly copied wholesale from SILE
 
 local lxp = require "lxp"
 

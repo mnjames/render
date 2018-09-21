@@ -9,4 +9,8 @@ echo "Pre-processing files..."
 if [ ! -d output/$1 ]; then
   mkdir output/$1
 fi
-cd packages && lua preprocess.lua $1
+cd packages && lua preprocess.lua $1 && cd ..
+
+echo "Rendering PDF"
+sile prepared.xml
+# sile prepared.xml -d frames
