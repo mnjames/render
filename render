@@ -5,12 +5,22 @@ if [ $# == 0 ]; then
     exit
 fi
 
-echo "Pre-processing files..."
-if [ ! -d output/$1 ]; then
-  mkdir output/$1
+echo "Pre-processing files"
+cd preprocessing
+if [ ! books/$1/Interlinear.xml ]; then
+  echo "Building the interlinear (this could take a while)."
+  lua create-interlinear.lua $1
 fi
-cd packages && lua preprocess.lua $1 && cd ..
+lua preprocess.lua $@ && cd ..
 
 echo "Rendering PDF"
 sile prepared.xml
 # sile prepared.xml -d frames
+# sile prepared.xml -d typesetter
+
+if [ ! -d output/$1 ]; then
+  mkdir output/$1
+fi
+
+mv prepared.xml output/$1/prepared.xml
+mv prepared.pdf output/$1/prepared.pdf

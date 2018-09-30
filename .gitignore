@@ -1,5 +1,7 @@
 books/*/*
 output/*/*
+resources/Lexicon.xml
+resources/lexicon-map.lua
 
 # Ignore Mac files
 .DS_Store

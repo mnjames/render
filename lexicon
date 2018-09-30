@@ -1,4 +1,5 @@
 #! /bin/bash
 
-echo "Building lexicon mappings..."
+echo "Building lexicon mappings (this will take a few minutes)"
 cd packages && lua create-lexicon.lua
+echo "Done"
