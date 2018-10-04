@@ -3,6 +3,24 @@ local sections = plain { id = "sections" }
 
 SILE.require("packages/raiselower")
 
+local numbers = {}
+numbers["0"] = "٠"
+numbers["1"] = "١"
+numbers["2"] = "٢"
+numbers["3"] = "٣"
+numbers["4"] = "٤"
+numbers["5"] = "٥"
+numbers["6"] = "٦"
+numbers["7"] = "٧"
+numbers["8"] = "٨"
+numbers["9"] = "٩"
+
+local footnoteMark = SU.utf8charfromcodepoint('U+0602')
+
+function toArabic (number)
+  return string.gsub(number, '%d', function (str) return numbers[str] end)
+end
+
 SILE.scratch.sections = {}
 
 SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("0pt"))
@@ -13,6 +31,7 @@ sections:loadPackage("build-interlinear")
 -- sections:loadPackage("linespacing")
 sections:loadPackage("rules")
 sections:loadPackage("bidi")
+-- sections:loadPackage("unichar")
 sections:defineMaster({
   id = "right",
   firstContentFrame = "content",
@@ -77,12 +96,31 @@ local typesetters = {
 }
 
 local charStyles = {
+  fr = {
+    weight = 800
+  },
   zheb = {
     family = "Times New Roman"
   },
   zgrk = {
     family = "Times New Roman"
   }
+}
+
+local paraStyles = {
+  s = function ()
+    SILE.call("set", {
+      parameter = "document.lskip",
+      value = "0pt plus 100000pt"
+    })
+    SILE.call("set", {
+      parameter = "document.rskip",
+      value = "0pt plus 100000pt"
+    })
+    SILE.call("font", {
+      weight = 800
+    })
+  end
 }
 
 local state = {
@@ -168,6 +206,7 @@ function buildConstraints ()
   local ssvLitFrame = sections.ssvLitTypesetter.frame
   local ssvFrame = sections.ssvTypesetter.frame
   local notesFrame = sections.notesTypesetter.frame
+  state.heights.interlinear = state.heights.interlinear + 10
   contentFrame:relax("bottom")
   interlinearFrame:relax("top")
   setHeight(contentFrame, "content")
@@ -195,6 +234,8 @@ function addRule (typesetter)
     SILE.call("par")
     local width
     if typesetter == sections.interlinearTypesetter then
+      typesetter:pushVglue({height = 10})
+      -- state.heights.interlinear = state.heights.interlinear + 10
       width = "100%fw"
     else
       width = "-100%fw"
@@ -223,7 +264,8 @@ sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "lef
 
 SILE.registerCommand("verse", function (options, content)
   -- SILE.scratch.twoverse.verse = options.number
-  SILE.typesetter:typeset(options.number.." ")
+  -- SILE.typesetter:typeset(options.number.." ")
+  SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number))
   SILE.process(content)
 end)
 
@@ -234,16 +276,29 @@ end)
 SILE.registerCommand("char", function (options, content)
   SILE.call("bidi-on")
   SILE.call("font", charStyles[options.style] or {}, function ()
+    if options.style == "fr" and not options.morphed then
+      options.morphed = true
+      content[1] = footnoteMark..toArabic(string.gsub(content[1], '.+:', ''))
+    end
     SILE.process(content)
   end)
 end)
 
+local shouldPop
 SILE.registerCommand("para-start", function (options, content)
-  -- SILE.call("urdu:font")
+  if options.style ~= "p" then
+    shouldPop = true
+    SILE.settings.pushState()
+    local fn = paraStyles[options.style]
+    if fn then fn() end
+  else
+    shouldPop = false
+  end
 end)
 
 SILE.registerCommand("para-end", function (options, content)
   SILE.typesetter:leaveHmode()
+  if shouldPop then SILE.settings.popState() end
   -- process()
 end)
 
@@ -320,9 +375,12 @@ SILE.registerCommand("ssv", function (options, content)
 end)
 
 SILE.registerCommand("note", function (options, content)
-  SILE.Commands["raise"]({height = "0.7ex"}, function()
+  SILE.Commands["raise"]({height = "0.8ex"}, function()
     SILE.Commands["font"]({ size = "1.5ex" }, function()
-      SILE.typesetter:typeset(tostring(SILE.scratch.sections.notesNumber))
+      SILE.typesetter:typeset(
+        footnoteMark
+        ..toArabic(tostring(SILE.scratch.sections.notesNumber))
+      )
     end)
   end)
   local oldT = SILE.typesetter
@@ -377,6 +435,7 @@ function sections:init()
     size = "12pt",
     language = "urd",
     script = "Arab"
+    -- direction = "RTL"
   })
   return ret
 end

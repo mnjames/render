@@ -1,5 +1,6 @@
 SILE.registerCommand("interlinear:vernacular-font", function(options, content)
   SILE.call("font", {
+    direction = "RTL",
     size = "9pt",
     weight = 400
   })
@@ -27,6 +28,8 @@ SILE.settings.declare({
   help = "Glue added between consecutive Latin interlinear"
 })
 
+local bidi = SILE.require('bidi', 'packages')
+
 if not SU.firstChar then
   SU.firstChar = function (s)
     local chars = SU.splitUtf8(s)
@@ -37,6 +40,15 @@ if not SU.lastChar then
   SU.lastChar = function (s)
     local chars = SU.splitUtf8(s)
     return chars[#chars]
+  end
+end
+if not table.flip then
+  table.flip = function(tbl)
+    for i=1, math.floor(#tbl / 2) do
+      local tmp = tbl[i]
+      tbl[i] = tbl[#tbl - i + 1]
+      tbl[#tbl - i + 1] = tmp
+    end
   end
 end
 
@@ -79,6 +91,14 @@ SILE.registerCommand("item", function (options, content)
     end)
   end)
   local interlinearbox = SILE.typesetter.state.nodes[#SILE.typesetter.state.nodes]
+  local hbox = interlinearbox.value[1]
+  
+  if hbox.nodes then
+    hbox = hbox.nodes[1]
+    if hbox.value.items then table.flip(hbox.value.items) end
+    table.flip(hbox.value.glyphString)
+  end
+  
   interlinearbox.outputYourself = function (self, typesetter, line)
     local ox = typesetter.frame.state.cursorX
     local oy = typesetter.frame.state.cursorY
