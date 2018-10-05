@@ -23,9 +23,14 @@ function buildLink (cluster, map)
   for i, lexeme in ipairs(cluster) do
     if lexeme.tag == "Lexeme" then
       id = lexeme.attr.Id
-      greek = greek..string.sub(id, string.find(id, ':') + 1, -1)
-      if string.len(vernacular) > 0 then vernacular = vernacular.." " end
-      vernacular = vernacular..(map[lexeme.attr.GlossId] or "~")
+	  if string.find(id, 'Word:') == nil
+	  then
+		return nil
+	  else
+		greek = greek..string.sub(id, string.find(id, ':') + 1, -1)
+		if string.len(vernacular) > 0 then vernacular = vernacular.." " end
+		vernacular = vernacular..(map[lexeme.attr.GlossId] or "~")
+	  end
     end
   end
   return {
