@@ -121,17 +121,19 @@ function flatten (xml)
       --   attr = child.attr,
       --   tag = "begin-"..child.tag
       -- })
-      table.insert(flattened, {
-        attr = child.attr,
-        tag = child.tag.."-start"
-      })
-      for j, paraChild in ipairs(child) do
-        table.insert(flattened, paraChild)
+      if child.attr.style ~= "h" and child.attr.style ~= "toc1" and child.attr.style ~= "toc2" then
+        table.insert(flattened, {
+          attr = child.attr,
+          tag = child.tag.."-start"
+        })
+        for j, paraChild in ipairs(child) do
+          table.insert(flattened, paraChild)
+        end
+        table.insert(flattened, {
+          attr = {},
+          tag = child.tag.."-end"
+        })
       end
-      table.insert(flattened, {
-        attr = {},
-        tag = child.tag.."-end"
-      })
     else
       table.insert(flattened, child)
     end

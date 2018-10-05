@@ -17,6 +17,12 @@ numbers["9"] = "٩"
 
 local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 
+SILE.languageSupport.languages.urd = {
+  counter = function (options)
+    print(options)
+  end
+}
+
 function toArabic (number)
   return string.gsub(number, '%d', function (str) return numbers[str] end)
 end
@@ -108,17 +114,49 @@ local charStyles = {
 }
 
 local paraStyles = {
+  mt = function ()
+    SILE.call("skip", {
+      height = "8pt"
+    })
+    SILE.call("centering")
+    SILE.call("font", {
+      size = "20pt"
+    })
+  end,
+  mt2 = function ()
+    SILE.call("skip", {
+      height = "4pt"
+    })
+    SILE.call("centering")
+    SILE.call("font", {
+      size = "16pt"
+    })
+  end,
+  qc = function ()
+    SILE.call("skip", {
+      height = "2pt"
+    })
+    SILE.call("centering")
+    SILE.call("font", {
+      size = "12pt"
+    })
+  end,
   s = function ()
-    SILE.call("set", {
-      parameter = "document.lskip",
-      value = "0pt plus 100000pt"
-    })
-    SILE.call("set", {
-      parameter = "document.rskip",
-      value = "0pt plus 100000pt"
-    })
+    SILE.call("centering")
     SILE.call("font", {
       weight = 800
+    })
+  end,
+  toc1 = function ()
+    SILE.call("centering")
+    SILE.call("font", {
+      size = "10pt"
+    })
+  end,
+  toc2 = function ()
+    SILE.call("centering")
+    SILE.call("font", {
+      size = "10pt"
     })
   end
 }
@@ -262,6 +300,17 @@ end
 
 sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
 
+SILE.registerCommand("centering", function ()
+  SILE.settings.set("document.lskip", SILE.nodefactory.hfillGlue)
+  SILE.settings.set("document.rskip", SILE.nodefactory.hfillGlue)
+  SILE.settings.set("typesetter.parfillskip", SILE.nodefactory.zeroGlue)
+  SILE.settings.set("document.parindent", SILE.nodefactory.zeroGlue)
+  local space = SILE.length.parse("1spc")
+  space.stretch = 0
+  space.shrink = 0
+  SILE.settings.set("document.spaceskip", space)
+end)
+
 SILE.registerCommand("verse", function (options, content)
   -- SILE.scratch.twoverse.verse = options.number
   -- SILE.typesetter:typeset(options.number.." ")
@@ -308,7 +357,15 @@ SILE.registerCommand("chapter", function (options, content)
   SILE.typesetter = sections.mainTypesetter
   state.section = "content"
   SILE.scratch.sections.notesNumber = 1
-  process({options.number})
+  process({
+    toArabic(options.number),
+    {
+      attr = {
+        height = "4pt"
+      },
+      tag = "skip"
+    }
+  })
   -- SILE.typesetter:typeset(options.number)
   SILE.typesetter:leaveHmode()
   SILE.process(content)
@@ -416,6 +473,7 @@ SILE.registerCommand("note", function (options, content)
 end)
 
 function sections:init()
+  SILE.settings.set("document.language", "urd")
   -- sections.options.papersize("11in x 8.5in")
   sections:mirrorMaster("right", "left")
   sections.pageTemplate = SILE.scratch.masters["right"]
