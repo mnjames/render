@@ -91,12 +91,12 @@ SILE.registerCommand("item", function (options, content)
     end)
   end)
   local interlinearbox = SILE.typesetter.state.nodes[#SILE.typesetter.state.nodes]
-  local hbox = interlinearbox.value[1]
-  
-  if hbox.nodes then
-    hbox = hbox.nodes[1]
-    if hbox.value.items then table.flip(hbox.value.items) end
-    table.flip(hbox.value.glyphString)
+  for _, hbox in ipairs(interlinearbox.value) do
+    if hbox.nodes then
+      hbox = hbox.nodes[1]
+      if hbox.value.items then table.flip(hbox.value.items) end
+      table.flip(hbox.value.glyphString)
+    end
   end
   
   interlinearbox.outputYourself = function (self, typesetter, line)

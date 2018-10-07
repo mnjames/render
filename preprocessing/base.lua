@@ -1,5 +1,9 @@
 local base = {}
 
+string.trim = function (str)
+  return string.gsub(string.gsub(str, '^%s+', ''), '%s+$', '')
+end
+
 package.path = package.path..";../?.lua"
 
 base.readFile = function (file)
@@ -40,9 +44,9 @@ base.deparse = function (xml, maxChap, maxVerse)
     return xml
   end
   if maxChap and xml.tag == "chapter" and tonumber(xml.attr.number) > maxChap then return ""
-  elseif maxVerse and (xml.tag == "interlinear" or xml.tag == "ssv-lit" or xml.tag == "ssv") then
+  elseif maxVerse and xml.tag == "verse-section" then
     counter = counter + 1
-    if counter > 3*maxVerse then
+    if counter > maxVerse then
       return ""
     end
   end

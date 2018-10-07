@@ -223,7 +223,11 @@ function process (content)
     doSwitch()
     SILE.typesetter = saveTypesetter
     SILE.process(content)
+    saveNodes = clone(SILE.typesetter.state.nodes)
+    saveOutputQueue = clone(SILE.typesetter.state.outputQueue)
     state.heights[state.section] = calculateHeight()
+    SILE.typesetter.state.nodes = saveNodes
+    SILE.typesetter.state.outputQueue = saveOutputQueue
   else
     SILE.process(content)
   end
@@ -268,7 +272,7 @@ function fixCursors ()
 end
 
 function addRule (typesetter)
-  if #typesetter.state.nodes > 0 and typesetter ~= sections.mainTypesetter then
+  if #typesetter.state.nodes > 0 and typesetter ~= sections.mainTypesetter and typesetter ~= sections.notesTypesetter then
     SILE.call("par")
     local width
     if typesetter == sections.interlinearTypesetter then
@@ -289,9 +293,17 @@ function doSwitch()
   resetState()
   for frame, typesetter in pairs(typesetters) do
     SILE.typesetter = typesetter
-    addRule(typesetter)
-    SILE.typesetter:chuck()
-    SILE.typesetter.frame:leave()
+    SILE.settings.temporarily(function ()
+      if typesetter == sections.notesTypesetter then
+        SILE.call("set", {
+          parameter = "document.lineskip",
+          value = "0.7ex"
+        })
+      end
+      addRule(typesetter)
+      SILE.typesetter:chuck()
+      SILE.typesetter.frame:leave()
+    end)
   end
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
@@ -309,6 +321,10 @@ SILE.registerCommand("centering", function ()
   space.stretch = 0
   space.shrink = 0
   SILE.settings.set("document.spaceskip", space)
+end)
+
+SILE.registerCommand("verse-section", function (options, content)
+  SILE.process(content)
 end)
 
 SILE.registerCommand("verse", function (options, content)
@@ -462,7 +478,7 @@ SILE.registerCommand("note", function (options, content)
     -- SILE.typesetter:typeset(SILE.scratch.sections.notesNumber.." ")
     -- print('==================== BEGIN')
     SILE.process(content)
-    SILE.call("par")
+    -- SILE.call("par")
     -- print('END ====================')
   end)
   if not SILE.scratch.sections.initialPass then
