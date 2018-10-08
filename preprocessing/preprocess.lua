@@ -16,6 +16,12 @@ for _, a in ipairs(arg) do
     var = nil
   end
 end
+if args.verse then args.verse = tonumber(args.verse) end
+if args.chapter then args.chapter = tonumber(args.chapter) end
+local resolution
+if args.resolution then
+  resolution = tonumber(args.resolution)
+end
 
 local base = require "base"
 local lom = require "lomwithpos"
@@ -30,31 +36,31 @@ local buildOrder = {
   "notes"
 }
 
-function splitSection (obj)
-  local split1 = {
-    attr = obj.attr,
-    tag = obj.tag
-  }
-  local split2 = {
-    attr = {
-      "number",
-      "type",
-      number = tonumber(obj.attr.number) + 0.5,
-      type = obj.attr.type
-    },
-    tag = obj.tag
-  }
-  local breakPoint = #obj / 2
-  for i, child in ipairs(obj) do
-    if i < breakPoint then table.insert(split1, child)
-    else table.insert(split2, child)
-    end
-  end
-  return {
-    split1,
-    split2
-  }
-end
+-- function splitSection (obj)
+--   local split1 = {
+--     attr = obj.attr,
+--     tag = obj.tag
+--   }
+--   local split2 = {
+--     attr = {
+--       "number",
+--       "type",
+--       number = tonumber(obj.attr.number) + 0.5,
+--       type = obj.attr.type
+--     },
+--     tag = obj.tag
+--   }
+--   local breakPoint = #obj / 2
+--   for i, child in ipairs(obj) do
+--     if i < breakPoint then table.insert(split1, child)
+--     else table.insert(split2, child)
+--     end
+--   end
+--   return {
+--     split1,
+--     split2
+--   }
+-- end
 
 function createNested (parent, child, tag, index)
   local nested = {
@@ -235,13 +241,78 @@ function getFirst (array)
   return nil
 end
 
+function getLength (item)
+  if type(item) == 'string' then
+    return #item
+  else
+    local length = 0
+    for _, child in ipairs(item) do
+      length = length + getLength(child)
+    end
+    return length
+  end
+end
+
+function createTag (array, tag)
+  array.tag = tag
+  array.attr = {}
+  return array
+end
+
+function chunkUpString (str, obj)
+  local fn = string.gmatch(str, '[^%s]+')
+  local word = fn()
+  while word do
+    table.insert(obj, {
+      word = word
+    })
+    word = fn()
+  end
+end
+
+function splitSection (section, tag)
+  local all = {}
+  for _, item in ipairs(section) do
+    if type(item) == 'string' then
+      chunkUpString(item, all)
+    else
+      table.insert(all, item)
+    end
+  end
+  local length = #all / resolution
+  local split = {}
+  local sec = {}
+  local tot = 0
+  for _, item in ipairs(all) do
+    tot = tot + 1
+    if item.word then
+      item = item.word.." "
+      if type(sec[#sec]) == 'string' then
+        sec[#sec] = sec[#sec]..item
+      else
+        table.insert(sec, item)
+      end
+    else
+      table.insert(sec, item)
+    end
+    if tot > length then
+      tot = 0
+      table.insert(split, createTag(sec, tag))
+      sec = {}
+    end
+  end
+  if #sec > 0 then
+    table.insert(split, createTag(sec, tag))
+  end
+  return split
+end
+
 function combineChapter (xmls)
   local valid = getFirst(xmls)
-  -- local combined = {
-  --   attr = valid.attr,
-  --   tag = valid.tag
-  -- }
-  local combined = {
+  if args.chapter and tonumber(valid.attr.number) ~= args.chapter then
+    return
+  end
+  local chapter = {
     attr = {
       "number",
       number = valid.attr.number
@@ -251,37 +322,46 @@ function combineChapter (xmls)
   local children = {}
   for i = 1, #xmls do children[i] = {index = 1} end
   while true do
+    local verse = {
+      attr = {},
+      tag = 'verse-section'
+    }
     for i, xml in ipairs(xmls) do
       children[i] = getNextType("verse", children[i].index, xml)
     end
     valid = normalize(children)
     if not valid then break end
-    -- local verse = {
-    --   attr = {
-    --     "number",
-    --     "type",
-    --     number = valid.attr.number,
-    --     type = "verse"
-    --   },
-    --   tag = "section"
-    -- }
+    if args.verse and tonumber(valid.attr.number) > args.verse then
+      break
+    end
+    local split = {}
     for i, child in ipairs(children) do
       if child.value then
         child.index = child.index + 1
-        child.value.tag = buildOrder[i]
-        child.value.attr = {}
         if child.extra then
           for extraIndex, extraInsert in ipairs(child.extra) do
             table.insert(child.value, extraIndex, extraInsert)
           end
         end
-        table.insert(combined, child.value)
-        -- table.insert(verse, child.value)
+        if resolution then
+          table.insert(split, splitSection(child.value, buildOrder[i]))
+        else
+          child.value.tag = buildOrder[i]
+          child.value.attr = {}
+          table.insert(verse, child.value)
+        end
       end
     end
-    -- table.insert(combined, verse)
+    if resolution then
+      for i=1, resolution do
+        for _, section in ipairs(split) do
+          table.insert(verse, section[i] or "")
+        end
+      end
+    end
+    table.insert(chapter, verse)
   end
-  return combined
+  return chapter
 end
 
 function combine (xmls)
@@ -326,7 +406,7 @@ function combine (xmls)
       -- end
       table.insert(sections, child.value)
     end
-    table.insert(combined, combineChapter(sections))
+    table.insert(combined, combineChapter(sections) or "")
     for i, child in ipairs(children) do
       child.index = child.index + 1
     end
@@ -345,4 +425,4 @@ base.writeFile(outputDir.."/prepared.xml", base.deparse(combine({
   inter,
   ssvLit,
   ssv
-}), tonumber(args.chapter), tonumber(args.verse)))
+})))
