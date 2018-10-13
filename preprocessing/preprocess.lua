@@ -16,8 +16,16 @@ for _, a in ipairs(arg) do
     var = nil
   end
 end
+local chapters = {}
 if args.verse then args.verse = tonumber(args.verse) end
-if args.chapter then args.chapter = tonumber(args.chapter) end
+if args.chapter then chapters[1] = tonumber(args.chapter) end
+if args.maxChapter or args.minChapter then
+  local min = args.minChapter and tonumber(args.minChapter) or 1
+  local max = tonumber(args.maxChapter)
+  for i=min, max do
+    table.insert(chapters, i)
+  end
+end
 local resolution
 if args.resolution then
   resolution = tonumber(args.resolution)
@@ -128,17 +136,21 @@ function flatten (xml)
       --   tag = "begin-"..child.tag
       -- })
       if child.attr.style ~= "h" and child.attr.style ~= "toc1" and child.attr.style ~= "toc2" then
-        table.insert(flattened, {
-          attr = child.attr,
-          tag = child.tag.."-start"
-        })
-        for j, paraChild in ipairs(child) do
-          table.insert(flattened, paraChild)
+        if child.attr.style ~= "p" then
+          table.insert(flattened, child)
+        else
+          table.insert(flattened, {
+            attr = child.attr,
+            tag = child.tag.."-start"
+          })
+          for j, paraChild in ipairs(child) do
+            table.insert(flattened, paraChild)
+          end
+          table.insert(flattened, {
+            attr = {},
+            tag = child.tag.."-end"
+          })
         end
-        table.insert(flattened, {
-          attr = {},
-          tag = child.tag.."-end"
-        })
       end
     else
       table.insert(flattened, child)
@@ -379,13 +391,15 @@ function combine (xmls)
   --   attr = ssv.attr,
   --   tag = ssv.tag
   -- }
-  local ssvChild
-  local i = 1
-  while true do
-    ssvChild = ssv[i]
-    if ssvChild.tag == "section" then break end
-    table.insert(combined, ssvChild)
-    i = i + 1
+  if args.chapter == 1 then
+    local ssvChild
+    local i = 1
+    while true do
+      ssvChild = ssv[i]
+      if ssvChild.tag == "section" then break end
+      table.insert(combined, ssvChild)
+      i = i + 1
+    end
   end
   
   local children = {}
@@ -421,8 +435,11 @@ local inter = lom.parse(base.readFile(inputDir.."/Interlinear.xml"))
 ssvLit = flip(ssvLit)
 ssv = flip(ssv)
 
-base.writeFile(outputDir.."/prepared.xml", base.deparse(combine({
-  inter,
-  ssvLit,
-  ssv
-})))
+for _, chapter in ipairs(chapters) do
+  args.chapter = chapter
+  base.writeFile(outputDir.."/"..chapter..".xml", base.deparse(combine({
+    inter,
+    ssvLit,
+    ssv
+  })))
+end

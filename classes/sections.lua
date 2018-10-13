@@ -186,7 +186,18 @@ function clone (obj)
 end
 
 function calculateHeight ()
-  local vboxes = SILE.typesetter:boxUpNodes()
+  local vboxes
+  if SILE.typesetter == sections.notesTypesetter then
+    SILE.settings.temporarily(function ()
+      SILE.call("set", {
+        parameter = "document.lineskip",
+        value = "0.7ex"
+      })
+      vboxes = SILE.typesetter:boxUpNodes()
+    end)
+  else
+    vboxes = SILE.typesetter:boxUpNodes()
+  end
   local outputQueue = SILE.typesetter.state.outputQueue
 
   local height = 0
@@ -289,8 +300,7 @@ function addRule (typesetter)
   end
 end
 
-function doSwitch()
-  resetState()
+function finishPage()
   for frame, typesetter in pairs(typesetters) do
     SILE.typesetter = typesetter
     SILE.settings.temporarily(function ()
@@ -305,6 +315,11 @@ function doSwitch()
       SILE.typesetter.frame:leave()
     end)
   end
+end
+
+function doSwitch()
+  resetState()
+  finishPage()
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
   SILE.call("par")
@@ -349,27 +364,29 @@ SILE.registerCommand("char", function (options, content)
   end)
 end)
 
-local shouldPop
-SILE.registerCommand("para-start", function (options, content)
-  if options.style ~= "p" then
-    shouldPop = true
-    SILE.settings.pushState()
+SILE.registerCommand("para", function (options, content)
+  SILE.settings.temporarily(function ()
     local fn = paraStyles[options.style]
     if fn then fn() end
-  else
-    shouldPop = false
-  end
+    SILE.process(content)
+  end)
+end)
+
+SILE.registerCommand("para-start", function (options, content)
+  
 end)
 
 SILE.registerCommand("para-end", function (options, content)
   SILE.typesetter:leaveHmode()
-  if shouldPop then SILE.settings.popState() end
+  -- SILE.settings.popState()
   -- process()
 end)
 
 SILE.registerCommand("chapter", function (options, content)
-  buildConstraints()
-  doSwitch()
+  if options.number == "1" then
+    buildConstraints()
+    doSwitch()
+  end
   SILE.typesetter = sections.mainTypesetter
   state.section = "content"
   SILE.scratch.sections.notesNumber = 1
@@ -436,9 +453,17 @@ SILE.registerCommand("ssv", function (options, content)
     doSwitch()
     SILE.typesetter = sections.ssvTypesetter
     SILE.process(content)
+    saveSsvNodes = clone(SILE.typesetter.state.nodes)
+    saveSsvOutputQueue = clone(SILE.typesetter.state.outputQueue)
+    saveNotesNodes = clone(sections.notesTypesetter.state.nodes)
+    saveNotesOutputQueue = clone(sections.notesTypesetter.state.outputQueue)
     state.heights.ssv = calculateHeight()
     SILE.typesetter = sections.notesTypesetter
     state.heights.notes = calculateHeight()
+    SILE.typesetter.state.nodes = saveSsvNodes
+    SILE.typesetter.state.outputQueue = saveSsvOutputQueue
+    sections.notesTypesetter.state.nodes = saveNotesNodes
+    sections.notesTypesetter.state.outputQueue = saveNotesOutputQueue
   else
     SILE.process(content)
   end
@@ -528,11 +553,8 @@ end
 
 function sections:finish ()
   buildConstraints()
-  for frame, typesetter in pairs(typesetters) do
-    SILE.typesetter = typesetter
-    addRule(typesetter)
-    SILE.typesetter:chuck()
-  end
+  SILE.call("bidi-on")
+  finishPage()
   plain.finish(self)
 end
 

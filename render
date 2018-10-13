@@ -13,14 +13,23 @@ if [ ! books/$1/Interlinear.xml ]; then
 fi
 lua preprocess.lua $@ && cd ..
 
-echo "Rendering PDF"
-sile prepared.xml
-# sile prepared.xml -d frames
-# sile prepared.xml -d typesetter
+CHAPTERS=$(ls *.xml)
+
+echo "Rendering PDFs"
+for CHAPTER in $CHAPTERS
+do
+  sile $CHAPTER
+  # sile $CHAPTER -d frames
+  # sile $CHAPTER -d typesetter
+done
 
 if [ ! -d output/$1 ]; then
   mkdir output/$1
 fi
 
-mv prepared.xml output/$1/prepared.xml
-mv prepared.pdf output/$1/prepared.pdf
+echo "Combining PDFs"
+PDFS=$(ls *.pdf)
+gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
+
+mv *.xml output/$1
+mv *.pdf output/$1
