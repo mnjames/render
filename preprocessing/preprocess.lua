@@ -442,4 +442,5 @@ for _, chapter in ipairs(chapters) do
     ssvLit,
     ssv
   })))
+  base.reset()
 end

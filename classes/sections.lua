@@ -1,5 +1,6 @@
 local plain = SILE.require("plain", "classes")
 local sections = plain { id = "sections" }
+local context = require("context")
 
 SILE.require("packages/raiselower")
 
@@ -25,6 +26,12 @@ SILE.languageSupport.languages.urd = {
 
 function toArabic (number)
   return string.gsub(number, '%d', function (str) return numbers[str] end)
+end
+
+function writeFile (file, data)
+  file = io.open(file, "w")
+  file:write(data)
+  file:close()
 end
 
 SILE.scratch.sections = {}
@@ -327,6 +334,17 @@ end
 
 sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
 
+SILE.registerCommand("foliostyle", function (options, content)
+  SILE.call("font", {
+    family = "Awami Nastaliq",
+    size = "12pt",
+    language = "urd",
+    script = "Arab"
+  })
+  content[1] = toArabic(content[1])
+  SILE.call("center", {}, content)
+end)
+
 SILE.registerCommand("centering", function ()
   SILE.settings.set("document.lskip", SILE.nodefactory.hfillGlue)
   SILE.settings.set("document.rskip", SILE.nodefactory.hfillGlue)
@@ -369,6 +387,7 @@ SILE.registerCommand("para", function (options, content)
     local fn = paraStyles[options.style]
     if fn then fn() end
     SILE.process(content)
+    SILE.typesetter:leaveHmode()
   end)
 end)
 
@@ -517,7 +536,8 @@ function sections:init()
   SILE.settings.set("document.language", "urd")
   -- sections.options.papersize("11in x 8.5in")
   sections:mirrorMaster("right", "left")
-  sections.pageTemplate = SILE.scratch.masters["right"]
+  sections.pageTemplate = SILE.scratch.masters[context.side]
+  SILE.scratch.counters.folio.value = context.page
   state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(61.3, '%ph'))
 
   local ret = plain.init(self)
@@ -555,6 +575,9 @@ function sections:finish ()
   buildConstraints()
   SILE.call("bidi-on")
   finishPage()
+  local side = sections.pageTemplate == SILE.scratch.masters.right and "left" or "right"
+  local page = SILE.scratch.counters.folio.value + 1
+  writeFile("context.lua", "return {side=\""..side.."\",page="..page.."}")
   plain.finish(self)
 end
 
