@@ -69,4 +69,6 @@ base.deparse = function (xml, maxChap, maxVerse)
   return str
 end
 
+base.reset = function () counter = 0 end
+
 return base
