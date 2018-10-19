@@ -1,14 +1,14 @@
 SILE.registerCommand("interlinear:vernacular-font", function(options, content)
   SILE.call("font", {
     direction = "RTL",
-    size = "9pt",
+    size = "10pt",
     weight = 400
   })
 end)
 
 SILE.registerCommand("interlinear:source-font", function(options, content)
   SILE.call("font", {
-    family = "Times New Roman",
+    family = "SBL Greek",
     size = "12pt",
     weight = 800
   })
