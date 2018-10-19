@@ -5,16 +5,16 @@ local context = require("context")
 SILE.require("packages/raiselower")
 
 local numbers = {}
-numbers["0"] = "٠"
-numbers["1"] = "١"
-numbers["2"] = "٢"
-numbers["3"] = "٣"
-numbers["4"] = "٤"
-numbers["5"] = "٥"
-numbers["6"] = "٦"
-numbers["7"] = "٧"
-numbers["8"] = "٨"
-numbers["9"] = "٩"
+numbers["0"] = "۰"
+numbers["1"] = "۱"
+numbers["2"] = "۲"
+numbers["3"] = "۳"
+numbers["4"] = "۴"
+numbers["5"] = "۵"
+numbers["6"] = "۶"
+numbers["7"] = "۷"
+numbers["8"] = "۸"
+numbers["9"] = "۹"
 
 local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 
@@ -116,7 +116,7 @@ local charStyles = {
     family = "Times New Roman"
   },
   zgrk = {
-    family = "Times New Roman"
+    family = "SBL Greek"
   }
 }
 
@@ -504,7 +504,7 @@ SILE.registerCommand("note", function (options, content)
   SILE.typesetter = sections.notesTypesetter
   SILE.call("bidi-on")
   SILE.settings.temporarily(function ()
-    SILE.call("font", {size = "7pt"})
+    SILE.call("font", {size = "9pt"})
     -- SILE.settings.set("document.baselineskip", SILE.nodefactory.newVglue("5pt"))
     -- SILE.settings.set("document.lineskip", SILE.nodefactory.newVglue("30pt"))
     SILE.call("set", {
@@ -551,9 +551,10 @@ function sections:init()
   SILE.call("font", {
     -- family = "Scheherazade",
     family = "Awami Nastaliq",
-    size = "12pt",
+    size = "11pt",
     language = "urd",
-    script = "Arab"
+    script = "Arab",
+	features = "+shrt=3"
     -- direction = "RTL"
   })
   return ret
