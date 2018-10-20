@@ -386,8 +386,10 @@ SILE.registerCommand("para", function (options, content)
   SILE.settings.temporarily(function ()
     local fn = paraStyles[options.style]
     if fn then fn() end
+    SILE.call("bidi-on")
     SILE.process(content)
     SILE.typesetter:leaveHmode()
+    SILE.call("bidi-off")
   end)
 end)
 

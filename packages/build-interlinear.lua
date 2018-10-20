@@ -98,6 +98,7 @@ SILE.registerCommand("item", function (options, content)
       table.flip(hbox.value.glyphString)
     end
   end
+  table.flip(interlinearbox.value)
   
   interlinearbox.outputYourself = function (self, typesetter, line)
     local ox = typesetter.frame.state.cursorX

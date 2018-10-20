@@ -1,5 +1,5 @@
 #! /bin/bash
 
-echo "Building lexicon mappings (this will take a few minutes)"
+echo "Building lexicon mappings"
 cd preprocessing && lua create-lexicon.lua
 echo "Done"

@@ -7,10 +7,9 @@ end
 package.path = package.path..";../?.lua"
 
 base.readFile = function (file)
-  local ret = ""
-  for line in io.lines(file) do 
-    ret = ret .. line
-  end
+  file = io.open(file, 'r')
+  local ret = file:read('*a')
+  file:close()
   return ret
 end
 

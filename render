@@ -7,8 +7,8 @@ fi
 
 echo "Pre-processing files"
 cd preprocessing
-if [ ! books/$1/Interlinear.xml ]; then
-  echo "Building the interlinear (this could take a while)."
+if [ ! -f ../books/$1/Interlinear.xml ]; then
+  echo "Building the interlinear"
   lua create-interlinear.lua $1
 fi
 lua preprocess.lua $@ && cd ..
