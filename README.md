@@ -34,6 +34,10 @@ File organization:
 
 To execute the software:
 
+    ./render JHN --maxChapter 2 --verses 14
+
+    This will output the first 14 verses of the first two chapters of JHN and combine them into a single PDF.
+
     Creating the rendered chapters of the bible is a two step process:
 
     To create the SILE XML document, from the render folder
