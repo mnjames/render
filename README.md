@@ -51,3 +51,10 @@ To execute the software:
 
     For example:
     sile ../books/book_folder_name interlinear.xml
+
+## Fonts
+
+The following fonts are required for rendering:
+
+* Awami Nastaliq
+* SBL_grk
