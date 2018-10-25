@@ -34,7 +34,7 @@ File organization:
 
 To execute the software:
 
-    ./render JHN --maxChapter 2 --verses 14
+    ./render JHN --maxChapter 2 --verse 14
 
     This will output the first 14 verses of the first two chapters of JHN and combine them into a single PDF.
 
