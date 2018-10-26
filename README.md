@@ -3,58 +3,75 @@
 Combines data from several XML files to create a single SILE XML document
 that can generate a well-formatted PDF document.
 
-Specifics:
+#### Specifics:
 
-    A human translator provides the following files:
+A human translator provides the following files:
 
-    * Raw_interlinear.xml (xml) contains a mapping from greek words to their
-      Urdo translation.
-    * SSV.usx (xml) contains a literal Urdo translation.
-    * SSV_Lit.usx (xml) contains a more readable Urdo translation.
-    * ALEPH.usx (xml) contains notes on the Urdo translation organized by verse.
+* `Raw_interlinear.xml` contains a series of Bible verses and a maps
+  each greek word to its translated Urdo equivalent.
+* `SSV.usx` contains a literal Urdo translation.
+* `SSV_Lit.usx` contains a more readable Urdo translation.
+* `ALEPH.usx` contains notes on the Urdo translation organized by verse.
 
-    A Lua script combines this data into a single XML file with SILE markup
-    commands such that each page description contains a series of verses
-    with these four parts:
+See https://app.thedigitalbiblelibrary.org/static/docs/usx/index.html
+for a description of the `.usx` (XML) data format.
 
-    * Greek to Urdo interlinear
-    * Literal Urdo translation
-    * More readable Urdo translation
-    * Notes on the translation
+A Lua script combines this data into a single XML file with SILE markup
+commands such that each page description contains a series of verses
+with these four parts:
 
-    Page breaks are added to keep related verses and notes on the same page.
-    See the file "books/mockup.pdf" for an example.
+* Greek to Urdo interlinear
+* Literal Urdo translation
+* More readable Urdo translation
+* Notes on the translation
 
-File organization:
+Page breaks are added to keep related verses and notes on the same page.
+See the file `books/mockup.pdf` for an example.
 
-    Each book of the Bible is stored in a separate folder in the books
-    subfolder:  ex. books/JHN
+#### File organization:
 
-    Each book of the Bible is defined by the four files described above.
+Input files: Each book of the Bible is stored in a separate folder in the `books`
+sub folder:  e.g. `books/JHN`.
+Each book of the Bible is defined by the four files described above.
 
-To execute the software:
+Output file: Output files are stored in the `output` sub folder.
+The rendered document is stored in a `pdf` using the book's name. e.g. `output/JHN`
 
-    ./render JHN --maxChapter 2 --verse 14
+#### To execute the software:
 
-    This will output the first 14 verses of the first two chapters of JHN and combine them into a single PDF.
+To render chapters of a book, specify the book folder name, the starting
+and ending chapters and the maximum number of verses per chapter:
+```
+./render JHN --minChapter 3 --maxChapter 5 --verse 14`.
+```
 
-    Creating the rendered chapters of the bible is a two step process:
+This will output the first 14 verses of chapters 3, 4 and 5 of `JHN` and
+render them into a single PDF.
 
-    To create the SILE XML document, from the render folder
+The argument `maxChapter` must always be defined. If `minChapter` is not
+defined, it defaults to `1`. If `verse` is not defined, it renders every
+verse defined in the data files.
 
-    cd preprocessing
-    lua create-interlinear.lua book_folder_name
+#### Software Setup and Initial File Downloads
 
-    To render the final PDF,
+1. Install the `Lua` programming language:
+    * Macintosh: `brew install lua`
 
-    sile input_folder output_file_name
+2. Install the `Lua` package manager called luarocks:
+    * Macintosh: `brew install luarocks`
 
-    For example:
-    sile ../books/book_folder_name interlinear.xml
+3. Install a `Lua` module that performs XML parsing called `lxp`
+    * Macintosh: `luarocks install luaexpat`
 
-## Fonts
+4. Install `SILE` which performs the formatted rendering to a pdf:
+    * Macintosh: `brew install sile`
 
-The following fonts are required for rendering:
+5. Install `ghostscript`:
+    * Macintosh: `brew install ghostscript`
 
-* Awami Nastaliq
-* SBL_grk
+6. Download fonts:
+    * Download `Awami Nastaliq` (Arabic font) from https://software.sil.org/awami/download/
+    * Download `SBL_grk` (Greek) from http://www.bible-researcher.com/sblgreek.html
+
+7. Install fonts:
+    * Macintosh: Copy the `.ttf` (True Type Font) files to `/Library/Fonts`
