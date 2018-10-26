@@ -372,7 +372,6 @@ SILE.registerCommand("book", function (options, content)
 end)
 
 SILE.registerCommand("char", function (options, content)
-  SILE.call("bidi-on")
   SILE.call("font", charStyles[options.style] or {}, function ()
     if options.style == "fr" and not options.morphed then
       options.morphed = true
@@ -386,10 +385,8 @@ SILE.registerCommand("para", function (options, content)
   SILE.settings.temporarily(function ()
     local fn = paraStyles[options.style]
     if fn then fn() end
-    SILE.call("bidi-on")
     SILE.process(content)
     SILE.typesetter:leaveHmode()
-    SILE.call("bidi-off")
   end)
 end)
 
@@ -438,11 +435,9 @@ SILE.registerCommand("ssv-lit", function (options, content)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.ssvLitTypesetter
   state.section = "ssvLit"
-  SILE.call("bidi-on")
   process(content)
   SILE.typesetter = oldT
   state.section = "content"
-  SILE.call("bidi-off")
 end)
 
 SILE.registerCommand("ssv", function (options, content)
@@ -456,7 +451,6 @@ SILE.registerCommand("ssv", function (options, content)
   local saveNotesOutputQueue = clone(sections.notesTypesetter.state.outputQueue)
   local saveNotesHeight = state.heights.notes
   SILE.scratch.sections.initialPass = true
-  SILE.call("bidi-on")
   SILE.process(content)
   SILE.scratch.sections.initialPass = false
   state.heights.ssv = calculateHeight()
@@ -490,7 +484,6 @@ SILE.registerCommand("ssv", function (options, content)
   end
   SILE.typesetter = sections.mainTypesetter
   state.section = "content"
-  SILE.call("bidi-off")
 end)
 
 SILE.registerCommand("note", function (options, content)
@@ -504,44 +497,27 @@ SILE.registerCommand("note", function (options, content)
   end)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.notesTypesetter
-  SILE.call("bidi-on")
   SILE.settings.temporarily(function ()
     SILE.call("font", {size = "9pt"})
-    -- SILE.settings.set("document.baselineskip", SILE.nodefactory.newVglue("5pt"))
-    -- SILE.settings.set("document.lineskip", SILE.nodefactory.newVglue("30pt"))
     SILE.call("set", {
       parameter = "document.lineskip",
       value = "0.7ex"
     })
-    -- SILE.call("set", {
-    --   parameter = "linespacing.method",
-    --   value = "fixed"
-    -- })
-    -- SILE.call("set", {
-    --   parameter = "linespacing.fixed.baselinedistance",
-    --   value = "50pt"
-    -- })
-    -- SILE.typesetter:typeset(SILE.scratch.sections.notesNumber.." ")
-    -- print('==================== BEGIN')
     SILE.process(content)
-    -- SILE.call("par")
-    -- print('END ====================')
   end)
   if not SILE.scratch.sections.initialPass then
     SILE.scratch.sections.notesNumber = SILE.scratch.sections.notesNumber + 1
   end
   SILE.typesetter = oldT
-  -- SILE.call("bidi-off")
 end)
 
 function sections:init()
   SILE.settings.set("document.language", "urd")
-  -- sections.options.papersize("11in x 8.5in")
   sections:mirrorMaster("right", "left")
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
   state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(61.3, '%ph'))
-
+  
   local ret = plain.init(self)
   sections.mainTypesetter:init(SILE.getFrame("content"))
   sections.interlinearTypesetter:init(SILE.getFrame("interlinear"))
@@ -556,9 +532,14 @@ function sections:init()
     size = "11pt",
     language = "urd",
     script = "Arab",
-	features = "+shrt=3"
+    features = "+shrt=3"
     -- direction = "RTL"
   })
+  for _, typesetter in pairs(typesetters) do
+    SILE.typesetter = typesetter
+    SILE.call("bidi-on")
+  end
+  SILE.typesetter = sections.mainTypesetter
   return ret
 end
 
@@ -576,7 +557,6 @@ end
 
 function sections:finish ()
   buildConstraints()
-  SILE.call("bidi-on")
   finishPage()
   local side = sections.pageTemplate == SILE.scratch.masters.right and "left" or "right"
   local page = SILE.scratch.counters.folio.value + 1
