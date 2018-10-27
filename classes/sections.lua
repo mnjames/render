@@ -225,7 +225,7 @@ function breakNeeded ()
   return totalHeight > state.availableHeight
 end
 
-function process (content)
+function process (content, reset)
   content = content or {}
   local saveNodes = clone(SILE.typesetter.state.nodes)
   local saveOutputQueue = clone(SILE.typesetter.state.outputQueue)
@@ -240,6 +240,7 @@ function process (content)
     buildConstraints()
     doSwitch()
     SILE.typesetter = saveTypesetter
+    if reset then reset() end
     SILE.process(content)
     saveNodes = clone(SILE.typesetter.state.nodes)
     saveOutputQueue = clone(SILE.typesetter.state.outputQueue)
@@ -247,6 +248,7 @@ function process (content)
     SILE.typesetter.state.nodes = saveNodes
     SILE.typesetter.state.outputQueue = saveOutputQueue
   else
+    if reset then reset() end
     SILE.process(content)
   end
   SILE.typesetter = sections.mainTypesetter
@@ -330,6 +332,8 @@ function doSwitch()
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
   SILE.call("par")
+  SILE.scratch.lastInterlinearBox = nil
+  SILE.scratch.lastInterlinearText = nil
 end
 
 sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
@@ -426,7 +430,12 @@ SILE.registerCommand("interlinear", function (options, content)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.interlinearTypesetter
   state.section = "interlinear"
-  process(content)
+  local saveBox = SILE.scratch.lastInterlinearBox
+  local saveText = SILE.scratch.lastInterlinearText
+  process(content, function ()
+    SILE.scratch.lastInterlinearBox = saveBox
+    SILE.scratch.lastInterlinearText = saveText
+  end)
   SILE.typesetter = oldT
   state.section = "content"
 end)
