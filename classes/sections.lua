@@ -475,6 +475,7 @@ SILE.registerCommand("ssv", function (options, content)
     state.heights.ssv = calculateHeight()
     SILE.typesetter = sections.notesTypesetter
     state.heights.notes = calculateHeight()
+    SILE.typesetter = sections.ssvTypesetter
     SILE.typesetter.state.nodes = saveSsvNodes
     SILE.typesetter.state.outputQueue = saveSsvOutputQueue
     sections.notesTypesetter.state.nodes = saveNotesNodes
