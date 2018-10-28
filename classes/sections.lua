@@ -367,7 +367,7 @@ end)
 SILE.registerCommand("verse", function (options, content)
   -- SILE.scratch.twoverse.verse = options.number
   -- SILE.typesetter:typeset(options.number.." ")
-  SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number))
+  SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number).." ")
   SILE.process(content)
 end)
 
