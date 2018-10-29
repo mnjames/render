@@ -55,18 +55,18 @@ function buildLink (cluster, map)
 
     elseif data.tag == "Lexeme" then
       id = data.attr.Id
-	  if string.find(id, 'Word:') ~= nil then
-		-- Make sure there is only one "word" in a cluster
+      if string.find(id, 'Word:') ~= nil then
+        -- Make sure there is only one "word" in a cluster
         if string.len(greekWord) > 0 then print("Warning ... Found more than one word in a cluster") end
 
         -- Get the greek word
         greekWord = string.sub(id, string.find(id, ':') + 1, -1)
 
         -- Get the word translation
-		vernacularWord = map[data.attr.GlossId] or "~"
+        vernacularWord = map[data.attr.GlossId] or "~"
 
         -- print( string.format("Found Word: greekWord = '%s' vernacularWord = '%s'", greekWord, vernacularWord) )
-	  end
+      end
     end
   end -- for loop
 
@@ -175,7 +175,6 @@ function buildInterlinear (inter, map)
     end
   end
 
-  print("maxIndex = ", maxIndex)
   if maxIndex > MAX_CHARACTERS_IN_A_VERSE then print("Warning, MAX_CHARACTERS_IN_A_VERSE is too small.") end
 
   return chapters
