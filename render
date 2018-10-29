@@ -15,7 +15,7 @@ lua preprocess.lua $@ && cd ..
 
 echo "return {side=\"right\",page=1}" > context.lua
 
-CHAPTERS=$(ls *.xml)
+CHAPTERS=$(ls -v *.xml)
 
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS
@@ -30,7 +30,7 @@ if [ ! -d output/$1 ]; then
 fi
 
 echo "Combining PDFs"
-PDFS=$(ls *.pdf)
+PDFS=$(ls -v *.pdf)
 gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
 
 mv *.xml output/$1
