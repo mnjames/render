@@ -123,7 +123,7 @@ local charStyles = {
 	size = "14pt"
   },
   fq = {
-	size = "0pt"
+	size = "0.1pt"
   }
 }
 
