@@ -25,9 +25,10 @@ do
   # sile $CHAPTER -d typesetter
 done
 
-if [ ! -d output/$1 ]; then
-  mkdir output/$1
+if [ -d output/$1 ]; then
+  rm -r output/$1
 fi
+mkdir output/$1
 
 echo "Combining PDFs"
 PDFS=$(ls *.pdf | sort -g)
