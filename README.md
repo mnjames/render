@@ -8,10 +8,10 @@ that can generate a well-formatted PDF document.
 A human translator provides the following files:
 
 * `Raw_interlinear.xml` contains a series of Bible verses and a maps
-  each greek word to its translated Urdo equivalent.
-* `SSV.usx` contains a literal Urdo translation.
-* `SSV_Lit.usx` contains a more readable Urdo translation.
-* `ALEPH.usx` contains notes on the Urdo translation organized by verse.
+  each greek word to its translated Urdu equivalent.
+* `SSV.usx` contains a literal Urdu translation.
+* `SSV_Lit.usx` contains a more readable Urdu translation.
+* `ALEPH.usx` contains notes on the Urdu translation organized by verse.
 
 See https://app.thedigitalbiblelibrary.org/static/docs/usx/index.html
 for a description of the `.usx` (XML) data format.
@@ -20,9 +20,9 @@ A Lua script combines this data into a single XML file with SILE markup
 commands such that each page description contains a series of verses
 with these four parts:
 
-* Greek to Urdo interlinear
-* Literal Urdo translation
-* More readable Urdo translation
+* Greek to Urdu interlinear
+* Literal Urdu translation
+* More readable Urdu translation
 * Notes on the translation
 
 Page breaks are added to keep related verses and notes on the same page.
@@ -72,6 +72,7 @@ verse defined in the data files.
 6. Download fonts:
     * Download `Awami Nastaliq` (Arabic font) from https://software.sil.org/awami/download/
     * Download `SBL_grk` (Greek) from http://www.bible-researcher.com/sblgreek.html
+	* Download `Scheherazade` (Arabic) from https://software.sil.org/scheherazade/download/
 
 7. Install fonts:
     * Macintosh: Copy the `.ttf` (True Type Font) files to `/Library/Fonts`

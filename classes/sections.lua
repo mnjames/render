@@ -117,6 +117,13 @@ local charStyles = {
   },
   zgrk = {
     family = "SBL Greek"
+  },
+  zarab = {
+    family = "Scheherazade",
+	size = "14pt"
+  },
+  fq = {
+	size = "0.1pt"
   }
 }
 
@@ -145,7 +152,8 @@ local paraStyles = {
     })
     SILE.call("centering")
     SILE.call("font", {
-      size = "12pt"
+	  family = "Scheherazade",
+      size = "16pt"
     })
   end,
   s = function ()
