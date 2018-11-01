@@ -120,10 +120,7 @@ local charStyles = {
   },
   zarab = {
     family = "Scheherazade",
-	size = "14pt"
-  },
-  fq = {
-	size = "0.1pt"
+    size = "14pt"
   }
 }
 
@@ -152,7 +149,7 @@ local paraStyles = {
     })
     SILE.call("centering")
     SILE.call("font", {
-	  family = "Scheherazade",
+      family = "Scheherazade",
       size = "16pt"
     })
   end,
@@ -384,6 +381,7 @@ SILE.registerCommand("book", function (options, content)
 end)
 
 SILE.registerCommand("char", function (options, content)
+  if options.style == "fq" then return end
   SILE.call("font", charStyles[options.style] or {}, function ()
     if options.style == "fr" and not options.morphed then
       options.morphed = true
