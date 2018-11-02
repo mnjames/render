@@ -110,7 +110,7 @@ local typesetters = {
 
 local charStyles = {
   fr = {
-    size = "12pt"
+    -- size = "12pt"
   },
   zheb = {
     family = "Times New Roman"
@@ -372,7 +372,9 @@ end)
 SILE.registerCommand("verse", function (options, content)
   -- SILE.scratch.twoverse.verse = options.number
   -- SILE.typesetter:typeset(options.number.." ")
-  SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number).." ")
+  SILE.call("font", {size = "14pt"}, function ()
+    SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
+  end)
   SILE.process(content)
 end)
 
@@ -385,7 +387,7 @@ SILE.registerCommand("char", function (options, content)
   SILE.call("font", charStyles[options.style] or {}, function ()
     if options.style == "fr" and not options.morphed then
       options.morphed = true
-      content[1] = footnoteMark..toArabic(string.gsub(content[1], '.+:', ''))
+      content[1] = SU.utf8charfromcodepoint("U+06DD")..toArabic(string.gsub(content[1], '.+:', '')..' ')
     end
     SILE.process(content)
   end)
@@ -503,17 +505,22 @@ SILE.registerCommand("ssv", function (options, content)
 end)
 
 SILE.registerCommand("note", function (options, content)
-  SILE.Commands["raise"]({height = "0.8ex"}, function()
+  SILE.call("raise", {height = "5pt"}, function ()
     SILE.Commands["font"]({ size = "1.5ex" }, function()
       SILE.typesetter:typeset(
         footnoteMark
-        ..toArabic(tostring(SILE.scratch.sections.notesNumber))
+        ..toArabic(tostring(SILE.scratch.sections.notesNumber).." ")
       )
     end)
   end)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.notesTypesetter
   SILE.settings.temporarily(function ()
+    SILE.call("font", {size = "12pt"})
+    SILE.typesetter:typeset(
+      footnoteMark
+      ..toArabic(tostring(SILE.scratch.sections.notesNumber)..': ')
+    )
     SILE.call("font", {size = "9pt"})
     SILE.call("set", {
       parameter = "document.lineskip",
