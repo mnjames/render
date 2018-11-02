@@ -61,8 +61,8 @@ base.deparse = function (xml, maxChap, maxVerse)
     return str.." />"
   end
   str = str..">"
-  for i, child in ipairs(xml) do
-    str = str..base.deparse(child, maxChap, maxVerse)
+  for i=1, #xml do
+    str = str..(base.deparse(xml[i], maxChap, maxVerse) or '')
   end
   str = str.."</"..xml.tag..">"
   return str

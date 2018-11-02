@@ -19,6 +19,7 @@ end
 --------------------------------------------------------------------
 -- Debugging function to print a table (recursively)
 function printTable(name, t, level)
+  level = level or 0
   if type(t) == "table" then
     local tabs = ""
     for j=1,level do
@@ -123,7 +124,8 @@ function buildInterlinear (inter, map)
             number = chapter,
             type = "chapter"
           },
-          tag = "section"
+          tag = "section",
+          totalVerses = 0
         }
       end
       verseTable = {
@@ -172,10 +174,23 @@ function buildInterlinear (inter, map)
 
       -- printTable("verseTable", verseTable, 4)
       chapters[chapter][verse] = verseTable
+      if chapters[chapter].totalVerses < verse then
+        chapters[chapter].totalVerses = verse
+      end
     end
   end
 
   if maxIndex > MAX_CHARACTERS_IN_A_VERSE then print("Warning, MAX_CHARACTERS_IN_A_VERSE is too small.") end
+
+  -- Fill in any gaps that may exist
+  for _, chapter in ipairs(chapters) do
+    if #chapter < chapter.totalVerses then
+      -- Found a gap
+      for i=1, chapter.totalVerses do
+        if not chapter[i] then chapter[i] = '' end
+      end
+    end
+  end
 
   return chapters
 end
