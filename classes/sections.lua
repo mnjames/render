@@ -110,7 +110,7 @@ local typesetters = {
 
 local charStyles = {
   fr = {
-    weight = 800
+    size = "12pt"
   },
   zheb = {
     family = "Times New Roman"
