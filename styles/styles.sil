@@ -1,0 +1,5 @@
+\begin[papersize=a4,class=sections]{document}
+
+\script[src=packages/styles]%
+
+\end{document}

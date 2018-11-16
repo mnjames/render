@@ -20,9 +20,9 @@ CHAPTERS=$(ls -v *.xml)
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS
 do
-  sile $CHAPTER
-  # sile $CHAPTER -d frames
-  # sile $CHAPTER -d typesetter
+  sile -I styles/styles.sil $CHAPTER
+  # sile -I styles/styles.sil $CHAPTER -d frames
+  # sile -I styles/styles.sil $CHAPTER -d typesetter
 done
 
 if [ -d output/$1 ]; then

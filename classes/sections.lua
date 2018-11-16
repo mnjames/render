@@ -2,6 +2,13 @@ local plain = SILE.require("plain", "classes")
 local sections = plain { id = "sections" }
 local context = require("context")
 
+SILE.settings.declare({
+  name = "sections.sectionskip",
+  type = "number or integer",
+  default = 2,
+  help = "A page percentage to ensure exists between sections"
+})
+
 SILE.require("packages/raiselower")
 
 local numbers = {}
@@ -18,12 +25,6 @@ numbers["9"] = "۹"
 
 local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 
-SILE.languageSupport.languages.urd = {
-  counter = function (options)
-    print(options)
-  end
-}
-
 function toArabic (number)
   return string.gsub(number, '%d', function (str) return numbers[str] end)
 end
@@ -35,9 +36,6 @@ function writeFile (file, data)
 end
 
 SILE.scratch.sections = {}
-
-SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("0pt"))
-SILE.settings.set("typesetter.parseppattern", -1)
 
 sections:loadPackage("masters")
 sections:loadPackage("build-interlinear")
@@ -52,13 +50,13 @@ sections:defineMaster({
     title = {
       right = "right(content)",
       left = "left(content)",
-      top = "10%ph",
+      top = "5%ph",
       height = "0",
       bottom = "top(content)"
     },
     content = {
-      right = "93.7%pw",
-      left = "14%pw",
+      right = "94%pw",
+      left = "12%pw",
       height = "75%ph",
       top = "bottom(title)",
       direction = "RTL"
@@ -89,8 +87,8 @@ sections:defineMaster({
     folio = {
       left = "left(content)",
       right = "right(content)",
-      top = "86.3%ph",
-      bottom = "88.3%ph"
+      top = "93%ph",
+      bottom = "95%ph"
     }
   }
 })
@@ -273,6 +271,7 @@ function buildConstraints ()
   local ssvLitFrame = sections.ssvLitTypesetter.frame
   local ssvFrame = sections.ssvTypesetter.frame
   local notesFrame = sections.notesTypesetter.frame
+  local skip = SILE.settings.get("sections.sectionskip")
   state.heights.interlinear = state.heights.interlinear + 10
   contentFrame:relax("bottom")
   interlinearFrame:relax("top")
@@ -283,9 +282,9 @@ function buildConstraints ()
   setHeight(notesFrame, "notes")
   contentFrame:constrain("bottom", "top("..interlinearFrame.id..")")
   interlinearFrame:constrain("top", "bottom("..contentFrame.id..")")
-  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + 2%ph")
-  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + 2%ph")
-  notesFrame:constrain("bottom", "top(folio) - 3%ph")
+  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..skip.."%ph")
+  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..skip.."%ph")
+  notesFrame:constrain("bottom", "top(folio) - "..skip.."%ph")
   fixCursors()
 end
 
@@ -519,7 +518,7 @@ SILE.registerCommand("note", function (options, content)
     SILE.call("font", {size = "12pt"})
     SILE.typesetter:typeset(
       footnoteMark
-      ..toArabic(tostring(SILE.scratch.sections.notesNumber)..': ')
+      ..toArabic(tostring(SILE.scratch.sections.notesNumber))
     )
     SILE.call("font", {size = "9pt"})
     SILE.call("set", {
@@ -539,7 +538,8 @@ function sections:init()
   sections:mirrorMaster("right", "left")
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
-  state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(61.3, '%ph'))
+  local deadspace = 4 * SILE.settings.get("sections.sectionskip") + 12
+  state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - deadspace, '%ph'))
   
   local ret = plain.init(self)
   sections.mainTypesetter:init(SILE.getFrame("content"))
