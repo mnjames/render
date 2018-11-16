@@ -1,5 +1,16 @@
 \begin[papersize=a4,class=sections]{document}
 
 \script[src=packages/styles]%
+\script[src=packages/xmltricks]%
+
+\xmltricks:ignore{char-fr char-fq}
+
+\define[command=char-ft]{\process}
+\define[command=char-w]{\process}
+\define[command=char-qt]{\process}
+\define[command=char-zheb]{\font[family=Times New Roman]{\process}}
+\define[command=char-zeng]{\font[family=Times New Roman]{\process}}
+\define[command=char-zgrk]{\font[family=SBL Greek]{\process}}
+\define[command=char-zarab]{\font[family=Scheherazade, size=14pt]{\process}}
 
 \end{document}

@@ -106,22 +106,6 @@ local typesetters = {
   notes = sections.notesTypesetter
 }
 
-local charStyles = {
-  fr = {
-    -- size = "12pt"
-  },
-  zheb = {
-    family = "Times New Roman"
-  },
-  zgrk = {
-    family = "SBL Greek"
-  },
-  zarab = {
-    family = "Scheherazade",
-    size = "14pt"
-  }
-}
-
 local paraStyles = {
   mt = function ()
     SILE.call("skip", {
@@ -382,14 +366,7 @@ SILE.registerCommand("book", function (options, content)
 end)
 
 SILE.registerCommand("char", function (options, content)
-  if options.style == "fq" then return end
-  SILE.call("font", charStyles[options.style] or {}, function ()
-    if options.style == "fr" and not options.morphed then
-      options.morphed = true
-      content[1] = SU.utf8charfromcodepoint("U+06DD")..toArabic(string.gsub(content[1], '.+:', '')..' ')
-    end
-    SILE.process(content)
-  end)
+  SILE.call("char-"..options.style, options, content)
 end)
 
 SILE.registerCommand("para", function (options, content)
