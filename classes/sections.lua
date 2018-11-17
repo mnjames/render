@@ -273,6 +273,17 @@ function doSwitch()
   SILE.scratch.lastInterlinearText = nil
 end
 
+function renderChapter (section)
+  local sections = SILE.scratch.sections
+  local chapter = sections[section]
+  if chapter then
+    SILE.call("chapter:mark", nil, { chapter })
+    if not sections.initialPass then
+      sections[section] = nil
+    end
+  end
+end
+
 sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
 
 SILE.registerCommand("foliostyle", function (options, content)
@@ -309,19 +320,10 @@ SILE.registerCommand("chapter", function (options, content)
     buildConstraints()
     doSwitch()
   end
-  SILE.typesetter = sections.mainTypesetter
-  state.section = "content"
   SILE.scratch.sections.notesNumber = 1
-  process({
-    toArabic(options.number),
-    {
-      attr = {
-        height = "4pt"
-      },
-      tag = "skip"
-    }
-  })
-  SILE.typesetter:leaveHmode()
+  local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F")
+  SILE.scratch.sections.ssvChapter = chapterNumber
+  SILE.scratch.sections.ssvLitChapter = chapterNumber
   SILE.process(content)
 end)
 
@@ -343,6 +345,7 @@ SILE.registerCommand("ssv-lit", function (options, content)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.ssvLitTypesetter
   state.section = "ssvLit"
+  renderChapter("ssvLitChapter")
   process(content)
   SILE.typesetter = oldT
   state.section = "content"
@@ -351,6 +354,14 @@ end)
 SILE.registerCommand("ssv", function (options, content)
   -- We have to do this one differently, due to its multi-frame nature
   SILE.typesetter = sections.ssvTypesetter
+  if SILE.scratch.sections.ssvChapter then
+    local firstItem = content[1]
+    if firstItem.tag == "para" and firstItem.attr.style == "s" then
+      SILE.process({ firstItem })
+      table.remove(content, 1)
+    end
+    renderChapter("ssvChapter")
+  end
 
   local saveSsvNodes = clone(SILE.typesetter.state.nodes)
   local saveSsvOutputQueue = clone(SILE.typesetter.state.outputQueue)

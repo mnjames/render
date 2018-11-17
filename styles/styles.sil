@@ -9,6 +9,7 @@
 \font[family=Awami Nastaliq, size=11pt, language=urd, script=Arab, features=+shrt=3]
 
 \define[command=verse-section]{\process}
+\define[command=chapter:mark]{\font[size=2em]{\process}}
 
 % Char Styles
 \xmltricks:ignore{char-fr char-fq}
