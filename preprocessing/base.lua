@@ -40,6 +40,9 @@ end
 local counter = 0
 base.deparse = function (xml, maxChap, maxVerse)
   if type(xml) ~= "table" then
+    if type(xml) == "string" and xml:match("%S") == nil then
+      xml = ""
+    end
     return xml
   end
   if maxChap and xml.tag == "chapter" and tonumber(xml.attr.number) > maxChap then return ""
