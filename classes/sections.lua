@@ -39,10 +39,8 @@ SILE.scratch.sections = {}
 
 sections:loadPackage("masters")
 sections:loadPackage("build-interlinear")
--- sections:loadPackage("linespacing")
 sections:loadPackage("rules")
 sections:loadPackage("bidi")
--- sections:loadPackage("unichar")
 sections:defineMaster({
   id = "right",
   firstContentFrame = "content",
@@ -104,55 +102,6 @@ local typesetters = {
   ssvLit = sections.ssvLitTypesetter,
   ssv = sections.ssvTypesetter,
   notes = sections.notesTypesetter
-}
-
-local paraStyles = {
-  mt = function ()
-    SILE.call("skip", {
-      height = "8pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "20pt"
-    })
-  end,
-  mt2 = function ()
-    SILE.call("skip", {
-      height = "4pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "16pt"
-    })
-  end,
-  qc = function ()
-    SILE.call("skip", {
-      height = "2pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      family = "Scheherazade",
-      size = "16pt"
-    })
-  end,
-  s = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      weight = 800
-    })
-  end,
-  toc1 = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "10pt"
-    })
-  end,
-  toc2 = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "10pt"
-    })
-  end
 }
 
 local state = {
@@ -337,32 +286,11 @@ SILE.registerCommand("foliostyle", function (options, content)
   SILE.call("center", {}, content)
 end)
 
-SILE.registerCommand("centering", function ()
-  SILE.settings.set("document.lskip", SILE.nodefactory.hfillGlue)
-  SILE.settings.set("document.rskip", SILE.nodefactory.hfillGlue)
-  SILE.settings.set("typesetter.parfillskip", SILE.nodefactory.zeroGlue)
-  SILE.settings.set("document.parindent", SILE.nodefactory.zeroGlue)
-  local space = SILE.length.parse("1spc")
-  space.stretch = 0
-  space.shrink = 0
-  SILE.settings.set("document.spaceskip", space)
-end)
-
-SILE.registerCommand("verse-section", function (options, content)
-  SILE.process(content)
-end)
-
 SILE.registerCommand("verse", function (options, content)
-  -- SILE.scratch.twoverse.verse = options.number
-  -- SILE.typesetter:typeset(options.number.." ")
   SILE.call("font", {size = "14pt"}, function ()
     SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
   end)
   SILE.process(content)
-end)
-
-SILE.registerCommand("book", function (options, content)
-  
 end)
 
 SILE.registerCommand("char", function (options, content)
@@ -371,21 +299,9 @@ end)
 
 SILE.registerCommand("para", function (options, content)
   SILE.settings.temporarily(function ()
-    local fn = paraStyles[options.style]
-    if fn then fn() end
-    SILE.process(content)
+    SILE.call("para-"..options.style, options, content)
     SILE.typesetter:leaveHmode()
   end)
-end)
-
-SILE.registerCommand("para-start", function (options, content)
-  
-end)
-
-SILE.registerCommand("para-end", function (options, content)
-  SILE.typesetter:leaveHmode()
-  -- SILE.settings.popState()
-  -- process()
 end)
 
 SILE.registerCommand("chapter", function (options, content)
@@ -405,7 +321,6 @@ SILE.registerCommand("chapter", function (options, content)
       tag = "skip"
     }
   })
-  -- SILE.typesetter:typeset(options.number)
   SILE.typesetter:leaveHmode()
   SILE.process(content)
 end)
@@ -511,7 +426,6 @@ SILE.registerCommand("note", function (options, content)
 end)
 
 function sections:init()
-  SILE.settings.set("document.language", "urd")
   sections:mirrorMaster("right", "left")
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
@@ -525,16 +439,6 @@ function sections:init()
   sections.ssvTypesetter:init(SILE.getFrame("ssv"))
   sections.notesTypesetter:init(SILE.getFrame("notes"))
   SILE.typesetter = sections.mainTypesetter
-  SILE.settings.set("document.lineskip", SILE.nodefactory.newVglue("15pt"))
-  SILE.call("font", {
-    -- family = "Scheherazade",
-    family = "Awami Nastaliq",
-    size = "11pt",
-    language = "urd",
-    script = "Arab",
-    features = "+shrt=3"
-    -- direction = "RTL"
-  })
   for _, typesetter in pairs(typesetters) do
     SILE.typesetter = typesetter
     SILE.call("bidi-on")
