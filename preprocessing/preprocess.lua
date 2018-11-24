@@ -5,6 +5,24 @@ if not book then
   os.exit()
 end
 
+-- Create a string that contains the contents of a table
+function dump(o, level)
+  if (level <= 0) then
+    return tostring(o)
+  end
+  if type(o) == 'table' then
+    local s = '{ '
+    for k,v in pairs(o) do
+      if type(k) ~= 'number' then k = '"'..k..'"' end
+      s = s .. '['..k..'] = ' .. dump(v, level-1) .. ','
+    end
+    return s .. '} '
+  else
+    return tostring(o)
+  end
+end
+
+-- Get the command line arguments
 local args = {}
 local var
 for _, a in ipairs(arg) do
@@ -16,6 +34,9 @@ for _, a in ipairs(arg) do
     var = nil
   end
 end
+
+print("cmd line args = ", dump(args, 2))
+
 local chapters = {}
 if args.verse then args.verse = tonumber(args.verse) end
 if args.chapter then chapters[1] = tonumber(args.chapter) end
@@ -30,6 +51,8 @@ local resolution
 if args.resolution then
   resolution = tonumber(args.resolution)
 end
+
+print("managed cmd line args = ", dump(args, 2))
 
 local base = require "base"
 local lom = require "lomwithpos"
@@ -94,7 +117,7 @@ function createNested (parent, child, tag, index)
     if parent[i].tag == tag or parent[i].tag == "chapter" then
       return i - 1, nested
     end
-    table.insert(nested, parent[i])
+    table.insert(nested, parent[i])  -- look here
   end
   return #parent, nested
   -- return #parent, splitSection(nested)
@@ -218,6 +241,7 @@ function getNextType (type, index, xml)
 end
 
 function normalize (children)
+  --print("normalize called", dump(children, 2))
   local keepGoing = false
   local numbers = {}
   for i, child in ipairs(children) do
@@ -226,6 +250,8 @@ function normalize (children)
       table.insert(numbers, tonumber(child.value.attr.number))
     end
   end
+  --print("numbers = ", dump(numbers, 2))
+
   if not keepGoing then return false end
   local min = math.min(table.unpack(numbers))
   local validChild
@@ -239,6 +265,7 @@ function normalize (children)
       end
     end
   end
+  --print("validChild = ", dump(validChild, 2))
   return validChild
 end
 
@@ -282,6 +309,7 @@ function chunkUpString (str, obj)
   end
 end
 
+-- Not called if resolution is not defined
 function splitSection (section, tag)
   local all = {}
   for _, item in ipairs(section) do
@@ -340,6 +368,7 @@ function combineChapter (xmls)
     }
     for i, xml in ipairs(xmls) do
       children[i] = getNextType("verse", children[i].index, xml)
+      print("children[",i, "] = ", dump(children[i], 2));
     end
     valid = normalize(children)
     if not valid then break end
@@ -376,6 +405,7 @@ function combineChapter (xmls)
   return chapter
 end
 
+-- Combine the interlinear, ssv, ssvLit, and notes onto pages
 function combine (xmls)
   local ssv = xmls[3]
   local combined = {
@@ -401,7 +431,9 @@ function combine (xmls)
       i = i + 1
     end
   end
-  
+
+  -- print("xmls ", dump_to_level(xmls, 3))
+
   local children = {}
   for i = 1, #xmls do children[i] = {index = 1} end
   while true do
@@ -432,10 +464,15 @@ local ssvLit = lom.parse(base.readFile(inputDir.."/SSV_Lit.usx"))
 local ssv = lom.parse(base.readFile(inputDir.."/SSV.usx"))
 local inter = lom.parse(base.readFile(inputDir.."/Interlinear.xml"))
 
+-- print("ssvlit = ", dump(ssvLit, 5));
+-- print("ssv = ", dump(ssv, 5));
+-- print("inter = " .. dump(inter, 5));
+
 ssvLit = flip(ssvLit)
 ssv = flip(ssv)
 
 for _, chapter in ipairs(chapters) do
+  print("chapter = ", dump(chapter,3))
   args.chapter = chapter
   base.writeFile(outputDir.."/"..chapter..".xml", base.deparse(combine({
     inter,
