@@ -66,10 +66,10 @@ local checkIfSpacerNeeded = function(reading)
   local top = #SILE.typesetter.state.nodes
   if top < 2 then return end
   -- Have we had other stuff since the last interlinear node?
-  if SILE.typesetter.state.nodes[top] ~= SILE.scratch.lastInterlinearBox
-     and SILE.typesetter.state.nodes[top-1] ~= SILE.scratch.lastInterlinearBox then
-    return
-  end
+  -- if SILE.typesetter.state.nodes[top] ~= SILE.scratch.lastInterlinearBox
+  --    and SILE.typesetter.state.nodes[top-1] ~= SILE.scratch.lastInterlinearBox then
+  --   return
+  -- end
   -- Does the previous reading end with a latin?
   -- if not isLatin(SU.codepoint(SU.lastChar(SILE.scratch.lastInterlinearText))) then return end
   -- OK, we need a spacer!

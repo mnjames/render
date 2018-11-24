@@ -19,6 +19,7 @@ end
 --------------------------------------------------------------------
 -- Debugging function to print a table (recursively)
 function printTable(name, t, level)
+  level = level or 0
   if type(t) == "table" then
     local tabs = ""
     for j=1,level do
@@ -55,18 +56,18 @@ function buildLink (cluster, map)
 
     elseif data.tag == "Lexeme" then
       id = data.attr.Id
-	  if string.find(id, 'Word:') ~= nil then
-		-- Make sure there is only one "word" in a cluster
+      if string.find(id, 'Word:') ~= nil then
+        -- Make sure there is only one "word" in a cluster
         if string.len(greekWord) > 0 then print("Warning ... Found more than one word in a cluster") end
 
         -- Get the greek word
         greekWord = string.sub(id, string.find(id, ':') + 1, -1)
 
         -- Get the word translation
-		vernacularWord = map[data.attr.GlossId] or "~"
+        vernacularWord = map[data.attr.GlossId] or "~"
 
         -- print( string.format("Found Word: greekWord = '%s' vernacularWord = '%s'", greekWord, vernacularWord) )
-	  end
+      end
     end
   end -- for loop
 
@@ -123,7 +124,8 @@ function buildInterlinear (inter, map)
             number = chapter,
             type = "chapter"
           },
-          tag = "section"
+          tag = "section",
+          totalVerses = 0
         }
       end
       verseTable = {
@@ -172,11 +174,23 @@ function buildInterlinear (inter, map)
 
       -- printTable("verseTable", verseTable, 4)
       chapters[chapter][verse] = verseTable
+      if chapters[chapter].totalVerses < verse then
+        chapters[chapter].totalVerses = verse
+      end
     end
   end
 
-  print("maxIndex = ", maxIndex)
   if maxIndex > MAX_CHARACTERS_IN_A_VERSE then print("Warning, MAX_CHARACTERS_IN_A_VERSE is too small.") end
+
+  -- Fill in any gaps that may exist
+  for _, chapter in ipairs(chapters) do
+    if #chapter < chapter.totalVerses then
+      -- Found a gap
+      for i=1, chapter.totalVerses do
+        if not chapter[i] then chapter[i] = '' end
+      end
+    end
+  end
 
   return chapters
 end

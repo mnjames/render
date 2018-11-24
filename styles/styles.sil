@@ -1,0 +1,58 @@
+\begin[papersize=a4,class=sections]{document}
+
+\script[src=packages/styles]%
+\script[src=packages/xmltricks]%
+\xmltricks:ignore{book}
+
+\set[parameter=document.lineskip,value=15pt]%
+
+\font[family=Awami Nastaliq, size=11pt, language=urd, script=Arab, features=+shrt=3]
+
+\define[command=verse-section]{\process}
+\define[command=chapter:mark]{\font[size=2em]{\process}}
+
+% Char Styles
+\xmltricks:ignore{char-fr char-fq}
+
+\define[command=char-ft]{\process}
+\define[command=char-w]{\process}
+\define[command=char-qt]{\process}
+\define[command=char-zheb]{\font[family=Times New Roman]{\process}}
+\define[command=char-zeng]{\font[family=Times New Roman]{\process}}
+\define[command=char-zgrk]{\font[family=SBL Greek]{\process}}
+\define[command=char-zarab]{\font[family=Scheherazade, size=14pt]{\process}}
+
+% Para Styles
+\xmltricks:ignore{para-start}
+
+\define[command=para-end]{\par}
+
+\define[command=para-mt]{%
+\skip[height=8pt]%
+\font[size=20pt]%
+\center{\process}%
+}
+\define[command=para-mt2]{%
+\skip[height=4pt]%
+\font[size=16pt]%
+\center{\process}%
+}
+\define[command=para-qc]{%
+\skip[height=2pt]%
+\font[size=16pt, family=Scheherazade]%
+\center{\process}%
+}
+\define[command=para-s]{%
+\font[weight=800]%
+\center{\process}%
+}
+\define[command=para-toc1]{%
+\font[size=10pt]%
+\center{\process}%
+}
+\define[command=para-toc2]{%
+\font[size=10pt]%
+\center{\process}%
+}
+
+\end{document}

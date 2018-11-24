@@ -40,6 +40,9 @@ end
 local counter = 0
 base.deparse = function (xml, maxChap, maxVerse)
   if type(xml) ~= "table" then
+    if type(xml) == "string" and xml:match("%S") == nil then
+      xml = ""
+    end
     return xml
   end
   if maxChap and xml.tag == "chapter" and tonumber(xml.attr.number) > maxChap then return ""
@@ -61,8 +64,8 @@ base.deparse = function (xml, maxChap, maxVerse)
     return str.." />"
   end
   str = str..">"
-  for i, child in ipairs(xml) do
-    str = str..base.deparse(child, maxChap, maxVerse)
+  for i=1, #xml do
+    str = str..(base.deparse(xml[i], maxChap, maxVerse) or '')
   end
   str = str.."</"..xml.tag..">"
   return str

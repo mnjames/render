@@ -410,17 +410,11 @@ function combine (xmls)
   local ssv = xmls[3]
   local combined = {
     attr = {
-      "class",
       "version",
-      class = "sections",
-      version = "2.5"
+      version = "1.0"
     },
-    tag = "sile"
+    tag = "sections"
   }
-  -- local combined = {
-  --   attr = ssv.attr,
-  --   tag = ssv.tag
-  -- }
   if args.chapter == 1 then
     local ssvChild
     local i = 1
@@ -443,13 +437,6 @@ function combine (xmls)
     if not normalize(children) then break end
     local sections = {}
     for i, child in ipairs(children) do
-      -- if child.extra then
-      --   -- print("Extra", child.extra[1].tag)
-      --   -- print("Value", child.value.tag)
-      --   for extraIndex, extraInsert in ipairs(child.extra) do
-      --     table.insert(child.value, extraIndex, extraValue)
-      --   end
-      -- end
       table.insert(sections, child.value)
     end
     table.insert(combined, combineChapter(sections) or "")

@@ -15,22 +15,23 @@ lua preprocess.lua $@ && cd ..
 
 echo "return {side=\"right\",page=1}" > context.lua
 
-CHAPTERS=$(ls *.xml)
+CHAPTERS=$(ls -v *.xml)
 
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS
 do
-  sile $CHAPTER
-  # sile $CHAPTER -d frames
-  # sile $CHAPTER -d typesetter
+  sile -I styles/styles.sil $CHAPTER
+  # sile -I styles/styles.sil $CHAPTER -d frames
+  # sile -I styles/styles.sil $CHAPTER -d typesetter
 done
 
-if [ ! -d output/$1 ]; then
-  mkdir output/$1
+if [ -d output/$1 ]; then
+  rm -r output/$1
 fi
+mkdir output/$1
 
 echo "Combining PDFs"
-PDFS=$(ls *.pdf)
+PDFS=$(ls *.pdf | sort -g)
 gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
 
 mv *.xml output/$1

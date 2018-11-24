@@ -2,6 +2,13 @@ local plain = SILE.require("plain", "classes")
 local sections = plain { id = "sections" }
 local context = require("context")
 
+SILE.settings.declare({
+  name = "sections.sectionskip",
+  type = "number or integer",
+  default = 2,
+  help = "A page percentage to ensure exists between sections"
+})
+
 SILE.require("packages/raiselower")
 
 local numbers = {}
@@ -18,12 +25,6 @@ numbers["9"] = "۹"
 
 local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 
-SILE.languageSupport.languages.urd = {
-  counter = function (options)
-    print(options)
-  end
-}
-
 function toArabic (number)
   return string.gsub(number, '%d', function (str) return numbers[str] end)
 end
@@ -36,15 +37,10 @@ end
 
 SILE.scratch.sections = {}
 
-SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("0pt"))
-SILE.settings.set("typesetter.parseppattern", -1)
-
 sections:loadPackage("masters")
 sections:loadPackage("build-interlinear")
--- sections:loadPackage("linespacing")
 sections:loadPackage("rules")
 sections:loadPackage("bidi")
--- sections:loadPackage("unichar")
 sections:defineMaster({
   id = "right",
   firstContentFrame = "content",
@@ -52,13 +48,13 @@ sections:defineMaster({
     title = {
       right = "right(content)",
       left = "left(content)",
-      top = "10%ph",
+      top = "5%ph",
       height = "0",
       bottom = "top(content)"
     },
     content = {
-      right = "93.7%pw",
-      left = "14%pw",
+      right = "94%pw",
+      left = "12%pw",
       height = "75%ph",
       top = "bottom(title)",
       direction = "RTL"
@@ -89,8 +85,8 @@ sections:defineMaster({
     folio = {
       left = "left(content)",
       right = "right(content)",
-      top = "86.3%ph",
-      bottom = "88.3%ph"
+      top = "93%ph",
+      bottom = "95%ph"
     }
   }
 })
@@ -106,66 +102,6 @@ local typesetters = {
   ssvLit = sections.ssvLitTypesetter,
   ssv = sections.ssvTypesetter,
   notes = sections.notesTypesetter
-}
-
-local charStyles = {
-  fr = {
-    weight = 800
-  },
-  zheb = {
-    family = "Times New Roman"
-  },
-  zgrk = {
-    family = "SBL Greek"
-  }
-}
-
-local paraStyles = {
-  mt = function ()
-    SILE.call("skip", {
-      height = "8pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "20pt"
-    })
-  end,
-  mt2 = function ()
-    SILE.call("skip", {
-      height = "4pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "16pt"
-    })
-  end,
-  qc = function ()
-    SILE.call("skip", {
-      height = "2pt"
-    })
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "12pt"
-    })
-  end,
-  s = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      weight = 800
-    })
-  end,
-  toc1 = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "10pt"
-    })
-  end,
-  toc2 = function ()
-    SILE.call("centering")
-    SILE.call("font", {
-      size = "10pt"
-    })
-  end
 }
 
 local state = {
@@ -225,7 +161,7 @@ function breakNeeded ()
   return totalHeight > state.availableHeight
 end
 
-function process (content)
+function process (content, reset)
   content = content or {}
   local saveNodes = clone(SILE.typesetter.state.nodes)
   local saveOutputQueue = clone(SILE.typesetter.state.outputQueue)
@@ -240,6 +176,7 @@ function process (content)
     buildConstraints()
     doSwitch()
     SILE.typesetter = saveTypesetter
+    if reset then reset() end
     SILE.process(content)
     saveNodes = clone(SILE.typesetter.state.nodes)
     saveOutputQueue = clone(SILE.typesetter.state.outputQueue)
@@ -247,6 +184,7 @@ function process (content)
     SILE.typesetter.state.nodes = saveNodes
     SILE.typesetter.state.outputQueue = saveOutputQueue
   else
+    if reset then reset() end
     SILE.process(content)
   end
   SILE.typesetter = sections.mainTypesetter
@@ -266,6 +204,7 @@ function buildConstraints ()
   local ssvLitFrame = sections.ssvLitTypesetter.frame
   local ssvFrame = sections.ssvTypesetter.frame
   local notesFrame = sections.notesTypesetter.frame
+  local skip = SILE.settings.get("sections.sectionskip")
   state.heights.interlinear = state.heights.interlinear + 10
   contentFrame:relax("bottom")
   interlinearFrame:relax("top")
@@ -276,9 +215,9 @@ function buildConstraints ()
   setHeight(notesFrame, "notes")
   contentFrame:constrain("bottom", "top("..interlinearFrame.id..")")
   interlinearFrame:constrain("top", "bottom("..contentFrame.id..")")
-  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + 2%ph")
-  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + 2%ph")
-  notesFrame:constrain("bottom", "top(folio) - 3%ph")
+  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..skip.."%ph")
+  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..skip.."%ph")
+  notesFrame:constrain("bottom", "top(folio) - "..skip.."%ph")
   fixCursors()
 end
 
@@ -330,6 +269,19 @@ function doSwitch()
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
   SILE.call("par")
+  SILE.scratch.lastInterlinearBox = nil
+  SILE.scratch.lastInterlinearText = nil
+end
+
+function renderChapter (section)
+  local sections = SILE.scratch.sections
+  local chapter = sections[section]
+  if chapter then
+    SILE.call("chapter:mark", nil, { chapter })
+    if not sections.initialPass then
+      sections[section] = nil
+    end
+  end
 end
 
 sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
@@ -345,62 +297,22 @@ SILE.registerCommand("foliostyle", function (options, content)
   SILE.call("center", {}, content)
 end)
 
-SILE.registerCommand("centering", function ()
-  SILE.settings.set("document.lskip", SILE.nodefactory.hfillGlue)
-  SILE.settings.set("document.rskip", SILE.nodefactory.hfillGlue)
-  SILE.settings.set("typesetter.parfillskip", SILE.nodefactory.zeroGlue)
-  SILE.settings.set("document.parindent", SILE.nodefactory.zeroGlue)
-  local space = SILE.length.parse("1spc")
-  space.stretch = 0
-  space.shrink = 0
-  SILE.settings.set("document.spaceskip", space)
-end)
-
-SILE.registerCommand("verse-section", function (options, content)
-  SILE.process(content)
-end)
-
 SILE.registerCommand("verse", function (options, content)
-  -- SILE.scratch.twoverse.verse = options.number
-  -- SILE.typesetter:typeset(options.number.." ")
-  SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number))
+  SILE.call("font", {size = "14pt"}, function ()
+    SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
+  end)
   SILE.process(content)
-end)
-
-SILE.registerCommand("book", function (options, content)
-  
 end)
 
 SILE.registerCommand("char", function (options, content)
-  SILE.call("bidi-on")
-  SILE.call("font", charStyles[options.style] or {}, function ()
-    if options.style == "fr" and not options.morphed then
-      options.morphed = true
-      content[1] = footnoteMark..toArabic(string.gsub(content[1], '.+:', ''))
-    end
-    SILE.process(content)
-  end)
+  SILE.call("char-"..options.style, options, content)
 end)
 
 SILE.registerCommand("para", function (options, content)
   SILE.settings.temporarily(function ()
-    local fn = paraStyles[options.style]
-    if fn then fn() end
-    SILE.call("bidi-on")
-    SILE.process(content)
+    SILE.call("para-"..options.style, options, content)
     SILE.typesetter:leaveHmode()
-    SILE.call("bidi-off")
   end)
-end)
-
-SILE.registerCommand("para-start", function (options, content)
-  
-end)
-
-SILE.registerCommand("para-end", function (options, content)
-  SILE.typesetter:leaveHmode()
-  -- SILE.settings.popState()
-  -- process()
 end)
 
 SILE.registerCommand("chapter", function (options, content)
@@ -408,20 +320,10 @@ SILE.registerCommand("chapter", function (options, content)
     buildConstraints()
     doSwitch()
   end
-  SILE.typesetter = sections.mainTypesetter
-  state.section = "content"
   SILE.scratch.sections.notesNumber = 1
-  process({
-    toArabic(options.number),
-    {
-      attr = {
-        height = "4pt"
-      },
-      tag = "skip"
-    }
-  })
-  -- SILE.typesetter:typeset(options.number)
-  SILE.typesetter:leaveHmode()
+  local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F")
+  SILE.scratch.sections.ssvChapter = chapterNumber
+  SILE.scratch.sections.ssvLitChapter = chapterNumber
   SILE.process(content)
 end)
 
@@ -429,7 +331,12 @@ SILE.registerCommand("interlinear", function (options, content)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.interlinearTypesetter
   state.section = "interlinear"
-  process(content)
+  local saveBox = SILE.scratch.lastInterlinearBox
+  local saveText = SILE.scratch.lastInterlinearText
+  process(content, function ()
+    SILE.scratch.lastInterlinearBox = saveBox
+    SILE.scratch.lastInterlinearText = saveText
+  end)
   SILE.typesetter = oldT
   state.section = "content"
 end)
@@ -438,16 +345,23 @@ SILE.registerCommand("ssv-lit", function (options, content)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.ssvLitTypesetter
   state.section = "ssvLit"
-  SILE.call("bidi-on")
+  renderChapter("ssvLitChapter")
   process(content)
   SILE.typesetter = oldT
   state.section = "content"
-  SILE.call("bidi-off")
 end)
 
 SILE.registerCommand("ssv", function (options, content)
   -- We have to do this one differently, due to its multi-frame nature
   SILE.typesetter = sections.ssvTypesetter
+  if SILE.scratch.sections.ssvChapter then
+    local firstItem = content[1]
+    if firstItem.tag == "para" and firstItem.attr.style == "s" then
+      SILE.process({ firstItem })
+      table.remove(content, 1)
+    end
+    renderChapter("ssvChapter")
+  end
 
   local saveSsvNodes = clone(SILE.typesetter.state.nodes)
   local saveSsvOutputQueue = clone(SILE.typesetter.state.outputQueue)
@@ -456,7 +370,6 @@ SILE.registerCommand("ssv", function (options, content)
   local saveNotesOutputQueue = clone(sections.notesTypesetter.state.outputQueue)
   local saveNotesHeight = state.heights.notes
   SILE.scratch.sections.initialPass = true
-  SILE.call("bidi-on")
   SILE.process(content)
   SILE.scratch.sections.initialPass = false
   state.heights.ssv = calculateHeight()
@@ -481,6 +394,7 @@ SILE.registerCommand("ssv", function (options, content)
     state.heights.ssv = calculateHeight()
     SILE.typesetter = sections.notesTypesetter
     state.heights.notes = calculateHeight()
+    SILE.typesetter = sections.ssvTypesetter
     SILE.typesetter.state.nodes = saveSsvNodes
     SILE.typesetter.state.outputQueue = saveSsvOutputQueue
     sections.notesTypesetter.state.nodes = saveNotesNodes
@@ -490,58 +404,45 @@ SILE.registerCommand("ssv", function (options, content)
   end
   SILE.typesetter = sections.mainTypesetter
   state.section = "content"
-  SILE.call("bidi-off")
 end)
 
 SILE.registerCommand("note", function (options, content)
-  SILE.Commands["raise"]({height = "0.8ex"}, function()
+  SILE.call("raise", {height = "5pt"}, function ()
     SILE.Commands["font"]({ size = "1.5ex" }, function()
       SILE.typesetter:typeset(
         footnoteMark
-        ..toArabic(tostring(SILE.scratch.sections.notesNumber))
+        ..toArabic(tostring(SILE.scratch.sections.notesNumber).." ")
       )
     end)
   end)
   local oldT = SILE.typesetter
   SILE.typesetter = sections.notesTypesetter
-  SILE.call("bidi-on")
   SILE.settings.temporarily(function ()
+    SILE.call("font", {size = "12pt"})
+    SILE.typesetter:typeset(
+      footnoteMark
+      ..toArabic(tostring(SILE.scratch.sections.notesNumber))
+    )
     SILE.call("font", {size = "9pt"})
-    -- SILE.settings.set("document.baselineskip", SILE.nodefactory.newVglue("5pt"))
-    -- SILE.settings.set("document.lineskip", SILE.nodefactory.newVglue("30pt"))
     SILE.call("set", {
       parameter = "document.lineskip",
       value = "0.7ex"
     })
-    -- SILE.call("set", {
-    --   parameter = "linespacing.method",
-    --   value = "fixed"
-    -- })
-    -- SILE.call("set", {
-    --   parameter = "linespacing.fixed.baselinedistance",
-    --   value = "50pt"
-    -- })
-    -- SILE.typesetter:typeset(SILE.scratch.sections.notesNumber.." ")
-    -- print('==================== BEGIN')
     SILE.process(content)
-    -- SILE.call("par")
-    -- print('END ====================')
   end)
   if not SILE.scratch.sections.initialPass then
     SILE.scratch.sections.notesNumber = SILE.scratch.sections.notesNumber + 1
   end
   SILE.typesetter = oldT
-  -- SILE.call("bidi-off")
 end)
 
 function sections:init()
-  SILE.settings.set("document.language", "urd")
-  -- sections.options.papersize("11in x 8.5in")
   sections:mirrorMaster("right", "left")
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
-  state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(61.3, '%ph'))
-
+  local deadspace = 4 * SILE.settings.get("sections.sectionskip") + 12
+  state.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - deadspace, '%ph'))
+  
   local ret = plain.init(self)
   sections.mainTypesetter:init(SILE.getFrame("content"))
   sections.interlinearTypesetter:init(SILE.getFrame("interlinear"))
@@ -549,16 +450,11 @@ function sections:init()
   sections.ssvTypesetter:init(SILE.getFrame("ssv"))
   sections.notesTypesetter:init(SILE.getFrame("notes"))
   SILE.typesetter = sections.mainTypesetter
-  SILE.settings.set("document.lineskip", SILE.nodefactory.newVglue("15pt"))
-  SILE.call("font", {
-    -- family = "Scheherazade",
-    family = "Awami Nastaliq",
-    size = "11pt",
-    language = "urd",
-    script = "Arab",
-	features = "+shrt=3"
-    -- direction = "RTL"
-  })
+  for _, typesetter in pairs(typesetters) do
+    SILE.typesetter = typesetter
+    SILE.call("bidi-on")
+  end
+  SILE.typesetter = sections.mainTypesetter
   return ret
 end
 
@@ -576,7 +472,6 @@ end
 
 function sections:finish ()
   buildConstraints()
-  SILE.call("bidi-on")
   finishPage()
   local side = sections.pageTemplate == SILE.scratch.masters.right and "left" or "right"
   local page = SILE.scratch.counters.folio.value + 1
