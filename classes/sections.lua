@@ -307,12 +307,28 @@ SILE.registerCommand("foliostyle", function (options, content)
   SILE.call("center", {}, content)
 end)
 
-SILE.registerCommand("verse", function (options, content)
-  SILE.call("font", {size = "14pt"}, function ()
-    SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
-  end)
-  SILE.process(content)
-end)
+-- Format a verse number
+SILE.registerCommand(
+  "verse",
+  function (options, content)
+    SILE.call(
+      "font",
+      {size = "14pt"},
+      function ()
+        local n1,n2
+        if string.match(options.number, "-") then
+          n1, n2 = string.match(options.number, "(%d+)-(%d+)")
+          SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(n1)..SU.utf8charfromcodepoint("U+200F").."-"..
+                                  SU.utf8charfromcodepoint("U+06DD")..toArabic(n2)..SU.utf8charfromcodepoint("U+200F").." ")
+
+        else
+          SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
+        end
+      end
+    )
+    SILE.process(content)
+  end
+)
 
 SILE.registerCommand("char", function (options, content)
   SILE.call("char-"..options.style, options, content)
