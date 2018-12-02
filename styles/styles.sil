@@ -8,7 +8,6 @@
 
 \font[family=Awami Nastaliq, size=11pt, language=urd, script=Arab, features=+shrt=3]
 
-\define[command=verse-section]{\process}
 \define[command=chapter:mark]{\font[size=2em]{\process}}
 
 % Char Styles
@@ -24,8 +23,6 @@
 
 % Para Styles
 \xmltricks:ignore{para-start}
-
-\define[command=para-end]{\par}
 
 \define[command=para-mt]{%
 \skip[height=8pt]%
