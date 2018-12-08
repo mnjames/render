@@ -455,6 +455,15 @@ function splitSection (section, tag)
   return split
 end
 
+-- Check to see if an object is something the verse number should be input BEFORE (e.g. whitespace, a para-end tag)
+function verseShouldPrecede (item)
+  if (type(item) == "string") then
+    return item:match("%S") == nil
+  else
+    return item.tag and item.tag:match("para")
+  end
+end
+
 --- -------------------------------------------------------------------
 -- Organize the interlinear, ssvLit, and ssv (including notes) onto pages.
 -- Processes one verse at a time.
@@ -501,14 +510,18 @@ function combineChapter (xmls)
       if child.value then
         -- print("i = ", i, "    child = ", dump(child, 5))
 
-        if child.value[1].attr.style == 'v' then -- this is a verse number
+        if child.value[1] and child.value[1].attr.style == 'v' then -- this is a verse number
           -- Move the verse number to the end of the child.value array
 
           -- remove the verse number from the first element of the array
           verse_number = table.remove(child.value, 1)
 
-          -- append the verse_number to the end of the array
-          table.insert(child.value, verse_number)
+          -- if the last element is a paragraph break ("para-end"), then insert the verse before it; otherwise, append it to the end
+          local insertIndex = #child.value + 1
+          while verseShouldPrecede(child.value[insertIndex - 1]) do
+            insertIndex = insertIndex - 1
+          end
+          table.insert(child.value, insertIndex, verse_number)
           -- print("found verse number\n", dump(child.value, 5))
         end
 

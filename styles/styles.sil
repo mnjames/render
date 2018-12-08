@@ -4,7 +4,7 @@
 \script[src=packages/xmltricks]%
 \xmltricks:ignore{book}
 
-\set[parameter=document.lineskip,value=15pt]%
+\set[parameter=document.lineskip,value=15pt + 2pt - 2pt]%
 
 \font[family=Awami Nastaliq, size=11pt, language=urd, script=Arab, features=+shrt=3]
 
