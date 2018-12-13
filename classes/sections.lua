@@ -331,7 +331,6 @@ function processWithBidi (content)
   nodes = SILE.typesetter.state.masterNodes
   SILE.typesetter:popState()
   if #queue > 0 then
-    -- SILE.typesetter:pushVglue(SILE.settings.get("document.lineskip"))
     for _, box in ipairs(queue) do
       table.insert(SILE.typesetter.state.outputQueue, box)
     end
@@ -396,17 +395,18 @@ function createCarryOver (overFill)
       local state = sections.types[item.name].state
       local chunks = state.chunks
       local chunkIndex = #chunks - item.numLinesToRemove
-      if (chunks.firstChunkIsRemovable and chunkIndex > 0) or chunkIndex > 0 then
+      -- if (chunks.firstChunkIsRemovable and chunkIndex > 0) or chunkIndex > 1 then
+      if chunkIndex > 0 then
         stillRemovingContent = true
         item.numLinesToRemove = item.numLinesToRemove + 1
         print("Subtracting", chunks[chunkIndex])
         overFill = overFill - chunks[chunkIndex]
         state.height = state.height - chunks[chunkIndex]
-        print("Still "..overFill.." to go")
         if overFill < 0 then
           stillOverful = false
           break
         end
+        print("Still "..overFill.." to go")
       end
     end
     if not stillRemovingContent then
@@ -594,7 +594,7 @@ function sections:init()
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
   local deadspace = 4 * SILE.settings.get("sections.sectionskip") + 12
-  SILE.scratch.sections.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - deadspace, '%ph'))
+  SILE.scratch.sections.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - deadspace, '%ph')) - 30
   
   local ret = plain.init(self)
   sections.mainTypesetter = SILE.typesetter
