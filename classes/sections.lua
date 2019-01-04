@@ -9,6 +9,27 @@ SILE.settings.declare({
   help = "A page percentage to ensure exists between sections"
 })
 
+SILE.settings.declare({
+  name = "sections.interlinearskip",
+  type = "Length",
+  default = SILE.length.parse("10pt"),
+  help = "Bottom margin of the interlinear section"
+})
+
+SILE.settings.declare({
+  name = "sections.ssvlitskip",
+  type = "Length",
+  default = SILE.length.parse("10pt"),
+  help = "Bottom margin of the SSV Lit section"
+})
+
+SILE.settings.declare({
+  name = "sections.ssvskip",
+  type = "Length",
+  default = SILE.length.parse("10pt"),
+  help = "Bottom margin of the SSV section"
+})
+
 SILE.require("packages/raiselower")
 
 local numbers = {}
@@ -58,7 +79,8 @@ sections:defineMaster({
     content = {
       right = "94%pw",
       left = "12%pw",
-      height = "20%ph",
+      -- height = "20%ph",
+      bottom = "100%ph",
       top = "20%ph",
       direction = "RTL"
     },
@@ -126,41 +148,16 @@ function resetState ()
   end
 end
 
-function clone (obj)
-  local cl = {}
-  for key, value in pairs(obj) do
-    cl[key] = value
-  end
-  return cl
-end
-
-function calculateHeight ()
-  local vboxes
-  if SILE.typesetter == sections.types.notes.typesetter then
-    SILE.settings.temporarily(function ()
-      SILE.call("set", {
-        parameter = "document.lineskip",
-        value = "0.7ex"
-      })
-      vboxes = SILE.typesetter:boxUpNodes()
-    end)
-  else
-    vboxes = SILE.typesetter:boxUpNodes()
-  end
-  local outputQueue = SILE.typesetter.state.outputQueue
-
-  local height = 0
-  for _, vbox in ipairs(vboxes) do
-    height = height + vbox.height + vbox.depth
-  end
-  for _, vbox in ipairs(outputQueue) do
-    height = height + vbox.height + vbox.depth
-  end
-  return height
-end
-
 function setHeight(frame, section)
   local height = sections.types[section].state.height
+
+  -- local measuredHeight = 0
+  -- local tState = sections.types[section].typesetter.state
+  -- for _, vbox in ipairs(tState.outputQueue) do
+  --   measuredHeight = measuredHeight + vbox.height + vbox.depth
+  -- end
+  -- print("Difference is "..(measuredHeight - height).." px")
+
   if type(height) ~= "number" then
     height = height.length + height.stretch
   end
@@ -172,15 +169,15 @@ function buildConstraints ()
   local ssvLitFrame = sections.types.ssvLit.typesetter.frame
   local ssvFrame = sections.types.ssv.typesetter.frame
   local notesFrame = sections.types.notes.typesetter.frame
-  local skip = SILE.settings.get("sections.sectionskip")
+  -- local skip = SILE.settings.get("sections.sectionskip")
   sections.types.interlinear.state.height = sections.types.interlinear.state.height + 10
   setHeight(interlinearFrame, "interlinear")
   setHeight(ssvLitFrame, "ssvLit")
   setHeight(ssvFrame, "ssv")
   setHeight(notesFrame, "notes")
-  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..skip.."%ph")
-  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..skip.."%ph")
-  notesFrame:constrain("bottom", "top(folio) - "..skip.."%ph")
+  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..SILE.settings.get("sections.interlinearskip"))
+  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..SILE.settings.get("sections.ssvlitskip"))
+  notesFrame:constrain("bottom", "top(folio) - 10px")
   fixCursors()
 end
 
@@ -212,7 +209,7 @@ function finishPage()
   for _, section in pairs(sections.types) do
     SILE.typesetter = section.typesetter
     SILE.settings.temporarily(function ()
-      if typesetter == sections.types.notes.typesetter then
+      if SILE.typesetter == sections.types.notes.typesetter then
         SILE.call("set", {
           parameter = "document.lineskip",
           value = "0.7ex"
@@ -243,13 +240,23 @@ function doSwitch()
   SILE.scratch.lastInterlinearText = nil
 end
 
-function renderChapter (section)
+function renderChapter (section, content)
   local sections = SILE.scratch.sections
-  local chapter = sections.types[section]
+  local chapter = sections[section.."Chapter"]
   if chapter then
-    SILE.call("chapter:mark", nil, { chapter })
+    for index, item in ipairs(content) do
+      if type(item) == "string" then
+        table.insert(content, index, {
+          chapter,
+          attr = {},
+          tag = "chapter:mark"
+        })
+        break
+      end
+    end
+    -- SILE.call("chapter:mark", nil, { chapter })
     if not sections.initialPass then
-      sections.types[section] = nil
+      sections[section.."Chapter"] = nil
     end
   end
 end
@@ -318,13 +325,12 @@ end
 
 function processWithBidi (content)
   local nodes = SILE.typesetter.state.nodes
-  -- if #nodes > 0 then
-  --   SILE.typesetter:pushGlue"1spc"
-  -- end
+  if #nodes > 0 then
+    SILE.typesetter:pushGlue"1spc"
+  end
   SILE.typesetter:pushState()
   SILE.typesetter.state.masterNodes = nodes
   SILE.process(content)
-  -- SILE.call("color", {color=SILE.typesetter == sections.types.ssvLit.typesetter and "red" or "green"}, content)
   local queue = SILE.typesetter.state.outputQueue
   local previousVbox = SILE.typesetter.state.previousVbox
   addBidifiedNodesToList()
@@ -358,11 +364,10 @@ end)
 
 SILE.registerCommand("chapter", function (options, content)
   if options.number == "1" then
-    buildConstraints()
     doSwitch()
   end
   SILE.scratch.sections.notesNumber = 1
-  local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F")
+  local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
   SILE.scratch.sections.ssvChapter = chapterNumber
   SILE.scratch.sections.ssvLitChapter = chapterNumber
   SILE.process(content)
@@ -381,11 +386,11 @@ function createCarryOver (overFill)
       toNextPage = {},
       numLinesToRemove = 0
     },
-    -- {
-    --   name = "interlinear",
-    --   toNextPage = {},
-    --   numLinesToRemove = 0
-    -- }
+    {
+      name = "interlinear",
+      toNextPage = {},
+      numLinesToRemove = 0
+    }
   }
 
   local stillOverful = true
@@ -418,7 +423,7 @@ function createCarryOver (overFill)
   for _, item in ipairs(carryOver) do
     local tState = sections.types[item.name].typesetter.state
     for lineIndex=1, item.numLinesToRemove do
-      if lineIndex == 1 then
+      if lineIndex == 1 and #tState.nodes > 0 then
         item.nodeCarryOver = tState.nodes
         tState.nodes = {}
       else
@@ -461,10 +466,13 @@ SILE.registerCommand("verse-section", function (options, content)
 
     for _, item in ipairs(carryOver) do
       if item.nodeCarryOver then
-        local tState = sections.types[item.name].typesetter.state
+        local section = sections.types[item.name]
+        local tState = section.typesetter.state
+        local sState = section.state
         tState.nodes = item.nodeCarryOver
         for _, box in ipairs(item.toNextPage) do
           table.insert(tState.outputQueue, box)
+          sState.height = sState.height + box.height + box.depth
         end
       end
     end
@@ -539,7 +547,9 @@ function measureContribution (sectionName)
     tState.nodes = nodes
 
     table.remove(tState.outputQueue)
-    table.remove(tState.outputQueue)
+    while #tState.outputQueue > 0 and not tState.outputQueue[#tState.outputQueue]:isVbox() do
+      table.remove(tState.outputQueue)
+    end
   end
 
   local difference = height - section.state.height
@@ -554,15 +564,8 @@ function measureContribution (sectionName)
   --   print("Adding "..difference.." for a total of "..height)
   --   if minimum > 0 then print(section.state) end
   -- end
-  tState.previousVbox = tState.outputQueue[#tState.outputQueue]
+  -- tState.previousVbox = tState.outputQueue[#tState.outputQueue]
 end
-
-SILE.registerCommand("interlinear", function (options, content)
-  -- SILE.typesetter = sections.types.interlinear.typesetter
-
-  -- SILE.process(content)
-  -- measureContribution("interlinear")
-end)
 
 function table.contains(table, element)
   for _, value in pairs(table) do
@@ -573,14 +576,23 @@ function table.contains(table, element)
   return false
 end
 
+SILE.registerCommand("interlinear", function (options, content)
+  SILE.typesetter = sections.types.interlinear.typesetter
+
+  SILE.process(content)
+  measureContribution("interlinear")
+end)
+
 SILE.registerCommand("ssv-lit", function (options, content)
   SILE.typesetter = sections.types.ssvLit.typesetter
+  renderChapter("ssvLit", content)
   processWithBidi(content)  
   measureContribution("ssvLit")
 end)
 
 SILE.registerCommand("ssv", function (options, content)
   SILE.typesetter = sections.types.ssv.typesetter
+  renderChapter("ssv", content)
   processWithBidi(content)
   measureContribution("ssv")
 end)
@@ -594,9 +606,23 @@ function sections:init()
   sections.pageTemplate = SILE.scratch.masters[context.side]
   SILE.scratch.counters.folio.value = context.page
   local deadspace = 4 * SILE.settings.get("sections.sectionskip") + 12
-  SILE.scratch.sections.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - deadspace, '%ph')) - 30
+  local deadspace = 10
+    + SILE.settings.get("sections.interlinearskip")
+    + SILE.settings.get("sections.ssvlitskip")
+    + SILE.settings.get("sections.ssvskip")
+  print("Page is "..SILE.toAbsoluteMeasurement(SILE.toMeasurement(100, '%ph')))
+  SILE.scratch.sections.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - 12, '%ph')) - deadspace - 30
+  print("We have "..SILE.scratch.sections.availableHeight.." available")
   
   local ret = plain.init(self)
+
+  SILE.typesetter:registerPageEndHook(function ()
+    SILE.outputter:debugFrame(SILE.getFrame("interlinear"))
+    SILE.outputter:debugFrame(SILE.getFrame("ssvLit"))
+    SILE.outputter:debugFrame(SILE.getFrame("ssv"))
+    SILE.outputter:debugFrame(SILE.getFrame("notes"))
+  end)
+
   sections.mainTypesetter = SILE.typesetter
   sections.mainTypesetter:init(SILE.getFrame("content"))
   sections.types.interlinear.typesetter:init(SILE.getFrame("interlinear"))
