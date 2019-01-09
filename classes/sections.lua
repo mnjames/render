@@ -58,7 +58,9 @@ function writeFile (file, data)
   file:close()
 end
 
-SILE.scratch.sections = {}
+SILE.scratch.sections = {
+  sectionNumber = 0
+}
 
 sections:loadPackage("masters")
 sections:loadPackage("build-interlinear")
@@ -215,14 +217,14 @@ function finishPage()
           value = "0.7ex"
         })
       end
-      if SILE.typesetter == sections.types.ssv.typesetter then
-        local str = "SSV Line: "
-        for _, box in ipairs(SILE.typesetter.state.outputQueue) do
-          local type = box:isVglue() and "G" or box:isVbox() and "B" or box:isPenalty() and "P" or "?"
-          str = str..type
-        end
-        print(str)
-      end
+      -- if SILE.typesetter == sections.types.ssv.typesetter then
+      --   local str = "SSV Line: "
+      --   for _, box in ipairs(SILE.typesetter.state.outputQueue) do
+      --     local type = box:isVglue() and "G" or box:isVbox() and "B" or box:isPenalty() and "P" or "?"
+      --     str = str..type
+      --   end
+      --   print(str)
+      -- end
       addRule(section.typesetter)
       SILE.typesetter:chuck()
       SILE.typesetter.frame:leave()
@@ -393,7 +395,21 @@ function createCarryOver (overFill)
     }
   }
 
-  local stillOverful = true
+  print("Carrying over unfinished lines")
+  for _, item in ipairs(carryOver) do
+    local tState = sections.types[item.name].typesetter.state
+    local state = sections.types[item.name].state
+    local chunks = state.chunks
+    if #tState.nodes > 0 then
+      print("Automatically removing unfinished line")
+      item.numLinesToRemove = item.numLinesToRemove + 1
+      print("Subtracting", chunks[#chunks])
+      overFill = overFill - chunks[#chunks]
+      state.height = state.height - chunks[#chunks]
+    end
+  end
+
+  local stillOverful = overFill > 0
   while stillOverful do
     local stillRemovingContent = false
     for _, item in ipairs(carryOver) do
@@ -407,7 +423,7 @@ function createCarryOver (overFill)
         print("Subtracting", chunks[chunkIndex])
         overFill = overFill - chunks[chunkIndex]
         state.height = state.height - chunks[chunkIndex]
-        if overFill < 0 then
+        if overFill <= 0 then
           stillOverful = false
           break
         end
@@ -445,6 +461,8 @@ SILE.registerCommand("verse-section", function (options, content)
     section.lastNodeLength = #tState.nodes
   end
 
+  SILE.scratch.sections.sectionNumber = SILE.scratch.sections.sectionNumber + 1
+
   SILE.process(content)
 
   local minimum = 0
@@ -460,6 +478,15 @@ SILE.registerCommand("verse-section", function (options, content)
       print("Can't even fit minimum!")
     end
     local carryOver = createCarryOver(overFill)
+
+    for sectionName, section in pairs(sections.types) do
+      print("Verse beginnings for "..sectionName)
+      for _, line in ipairs(section.typesetter.state.outputQueue) do
+        if line:isVbox() then
+          print(line.verseContribution)
+        end
+      end
+    end
     
     buildConstraints()
     doSwitch()
@@ -521,23 +548,33 @@ function measureContribution (sectionName)
   local height = 0
   local chunkHeight = 0
   local chunks = {
-    firstChunkIsRemovable = not verseStartedOnNewLine
+    -- firstChunkIsRemovable = not verseStartedOnNewLine
   }
-  local firstContributionIndex = intermediaryIndex
-  if not verseStartedOnNewLine then
-    firstContributionIndex = firstContributionIndex + 1
-  end
+  -- local firstContributionIndex = intermediaryIndex
+  -- if not verseStartedOnNewLine then
+  --   firstContributionIndex = firstContributionIndex + 1
+  -- end
   for index, vbox in ipairs(tState.outputQueue) do
     chunkHeight = chunkHeight + vbox.height + vbox.depth
     if vbox:isVbox() then
       height = height + chunkHeight
-      if index >= firstContributionIndex then
-        table.insert(chunks, chunkHeight)
-      end
+      -- if index >= firstContributionIndex then
+      table.insert(chunks, chunkHeight)
+      -- end
       chunkHeight = 0
+      
+      if not vbox.verseContribution then
+        local verseContribution = {}
+        for _, node in ipairs(vbox.nodes) do
+          if node.beginSection then
+            table.insert(verseContribution, node.beginSection)
+          end
+        end
+        vbox.verseContribution = verseContribution
+      end
     end
   end
-  print(sectionName, chunks)
+  -- print(sectionName, chunks)
 
   if not isHardBreak then
     local nodes = tState.outputQueue[#tState.outputQueue].nodes
@@ -578,7 +615,10 @@ end
 
 SILE.registerCommand("interlinear", function (options, content)
   SILE.typesetter = sections.types.interlinear.typesetter
-
+  SILE.typesetter:pushHbox({
+    beginSection = SILE.scratch.sections.sectionNumber,
+    outputYourself = function () end
+  })
   SILE.process(content)
   measureContribution("interlinear")
 end)
@@ -586,6 +626,10 @@ end)
 SILE.registerCommand("ssv-lit", function (options, content)
   SILE.typesetter = sections.types.ssvLit.typesetter
   renderChapter("ssvLit", content)
+  SILE.typesetter:pushHbox({
+    beginSection = SILE.scratch.sections.sectionNumber,
+    outputYourself = function () end
+  })
   processWithBidi(content)  
   measureContribution("ssvLit")
 end)
@@ -593,6 +637,10 @@ end)
 SILE.registerCommand("ssv", function (options, content)
   SILE.typesetter = sections.types.ssv.typesetter
   renderChapter("ssv", content)
+  SILE.typesetter:pushHbox({
+    beginSection = SILE.scratch.sections.sectionNumber,
+    outputYourself = function () end
+  })
   processWithBidi(content)
   measureContribution("ssv")
 end)
