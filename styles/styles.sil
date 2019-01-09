@@ -11,7 +11,7 @@
 \define[command=chapter:mark]{\font[size=2em]{\process}}
 
 % Char Styles
-\xmltricks:ignore{char-fr char-fq}
+\xmltricks:ignore{char-fr char-fq char-fp}
 
 \define[command=char-ft]{\process}
 \define[command=char-w]{\process}
