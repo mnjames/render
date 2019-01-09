@@ -377,6 +377,7 @@ end)
 
 function createCarryOver (overFill)
   print("Overfull by "..overFill)
+  local maxVerse = 1000000
   local carryOver = {
     {
       name = "ssv",
@@ -401,11 +402,15 @@ function createCarryOver (overFill)
     local state = sections.types[item.name].state
     local chunks = state.chunks
     if #tState.nodes > 0 then
+      local chunk = chunks[#chunks]
       print("Automatically removing unfinished line")
       item.numLinesToRemove = item.numLinesToRemove + 1
-      print("Subtracting", chunks[#chunks])
-      overFill = overFill - chunks[#chunks]
-      state.height = state.height - chunks[#chunks]
+      print("Subtracting", chunk.height)
+      overFill = overFill - chunk.height
+      state.height = state.height - chunk.height
+      if #chunk.verseContribution > 0 then
+        maxVerse = math.min(chunk.verseContribution[1] - 1, maxVerse)
+      end
     end
   end
 
@@ -418,11 +423,15 @@ function createCarryOver (overFill)
       local chunkIndex = #chunks - item.numLinesToRemove
       -- if (chunks.firstChunkIsRemovable and chunkIndex > 0) or chunkIndex > 1 then
       if chunkIndex > 0 then
+        local chunk = chunks[chunkIndex]
         stillRemovingContent = true
         item.numLinesToRemove = item.numLinesToRemove + 1
-        print("Subtracting", chunks[chunkIndex])
-        overFill = overFill - chunks[chunkIndex]
-        state.height = state.height - chunks[chunkIndex]
+        print("Subtracting", chunk.height)
+        overFill = overFill - chunk.height
+        state.height = state.height - chunk.height
+        if #chunk.verseContribution > 0 then
+          maxVerse = math.min(chunk.verseContribution[1] - 1, maxVerse)
+        end
         if overFill <= 0 then
           stillOverful = false
           break
@@ -448,6 +457,17 @@ function createCarryOver (overFill)
           table.insert(item.toNextPage, 1, table.remove(queue))
         until queue[#queue]:isVbox()
       end
+    end
+    local sectionMaxVerse
+    for i=#tState.outputQueue, 1, -1 do
+      local vbox = tState.outputQueue[i]
+      if vbox.verseContribution and #vbox.verseContribution > 0 then
+        sectionMaxVerse = vbox.verseContribution[#vbox.verseContribution]
+        break
+      end
+    end
+    if sectionMaxVerse > maxVerse then
+      print(item.name.." begins verse "..sectionMaxVerse.." but is only allowed to begin "..maxVerse)
     end
   end
 
@@ -479,14 +499,14 @@ SILE.registerCommand("verse-section", function (options, content)
     end
     local carryOver = createCarryOver(overFill)
 
-    for sectionName, section in pairs(sections.types) do
-      print("Verse beginnings for "..sectionName)
-      for _, line in ipairs(section.typesetter.state.outputQueue) do
-        if line:isVbox() then
-          print(line.verseContribution)
-        end
-      end
-    end
+    -- for sectionName, section in pairs(sections.types) do
+    --   print("Verse beginnings for "..sectionName)
+    --   for _, line in ipairs(section.typesetter.state.outputQueue) do
+    --     if line:isVbox() then
+    --       print(line.verseContribution)
+    --     end
+    --   end
+    -- end
     
     buildConstraints()
     doSwitch()
@@ -557,12 +577,6 @@ function measureContribution (sectionName)
   for index, vbox in ipairs(tState.outputQueue) do
     chunkHeight = chunkHeight + vbox.height + vbox.depth
     if vbox:isVbox() then
-      height = height + chunkHeight
-      -- if index >= firstContributionIndex then
-      table.insert(chunks, chunkHeight)
-      -- end
-      chunkHeight = 0
-      
       if not vbox.verseContribution then
         local verseContribution = {}
         for _, node in ipairs(vbox.nodes) do
@@ -572,6 +586,15 @@ function measureContribution (sectionName)
         end
         vbox.verseContribution = verseContribution
       end
+
+      height = height + chunkHeight
+      -- if index >= firstContributionIndex then
+      table.insert(chunks, {
+        height = chunkHeight,
+        verseContribution = vbox.verseContribution
+      })
+      -- end
+      chunkHeight = 0
     end
   end
   -- print(sectionName, chunks)

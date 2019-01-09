@@ -309,7 +309,6 @@ function getNextType (type, index, xml)
     end
   end
 
-  print("No next verse found!")
   return not_found
 end
 
