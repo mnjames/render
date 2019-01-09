@@ -309,6 +309,7 @@ function getNextType (type, index, xml)
     end
   end
 
+  print("No next verse found!")
   return not_found
 end
 
@@ -501,7 +502,7 @@ function combineChapter (xmls)
       if child.value then
         -- print("i = ", i, "    child = ", dump(child, 5))
 
-        if not child.value[1] then print(child.value) end
+        if not child.value[1] then print("Empty:", child.value) end
         if child.value[1].attr.style == 'v' then -- this is a verse number
           -- Move the verse number to the end of the child.value array
 
