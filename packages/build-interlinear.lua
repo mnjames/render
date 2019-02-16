@@ -1,7 +1,8 @@
 SILE.registerCommand("interlinear:vernacular-font", function(options, content)
   SILE.call("font", {
+    family = "Scheherazade",
     direction = "RTL",
-    size = "10pt",
+    size = "14pt",
     weight = 400
   })
 end)
@@ -17,8 +18,15 @@ end)
 SILE.settings.declare({
   name = "interlinear.height",
   type = "string",
-  default = "-6mm",
+  default = "-5mm",
   help = "Vertical offset between the interlinear and the main text"
+})
+
+SILE.settings.declare({
+  name = "interlinear.lineskip",
+  type = "string",
+  default = "15pt",
+  help = "Lineskip for the interlinear"
 })
 
 SILE.settings.declare({
@@ -91,6 +99,7 @@ SILE.registerCommand("item", function (options, content)
     end)
   end)
   local interlinearbox = SILE.typesetter.state.nodes[#SILE.typesetter.state.nodes]
+  interlinearbox.isInterlinearBox = true
   for _, hbox in ipairs(interlinearbox.value) do
     if hbox.nodes then
       hbox = hbox.nodes[1]
@@ -101,6 +110,30 @@ SILE.registerCommand("item", function (options, content)
   table.flip(interlinearbox.value)
   
   interlinearbox.outputYourself = function (self, typesetter, line)
+    if not line._adjustment then
+      local lineWidth = 0
+      local numWords = 0
+      for _, box in ipairs(line.nodes) do
+        if not box.isInterlinearBox then
+          if box.isGreekBox then
+            numWords = numWords + 1
+          end
+          lineWidth = lineWidth + (box:isBox() and box:scaledWidth(line) or box.width)
+        end
+      end
+      local bottom = typesetter.frame.state.cursorY
+      local width = typesetter.frame:width()
+      if not line.nodes[#line.nodes]:isPenalty() then
+        line._adjustment = (width - lineWidth.length) / (numWords - 1)
+      else
+        line._adjustment = 0
+      end
+      SILE.outputter:pushColor(SILE.colorparser("green"))
+      SILE.outputter.rule(typesetter.frame:left(), bottom - 10, width, 14)
+      SILE.outputter:popColor()
+    else
+      typesetter.frame:advanceWritingDirection(line._adjustment)
+    end
     local ox = typesetter.frame.state.cursorX
     local oy = typesetter.frame.state.cursorY
     typesetter.frame:advanceWritingDirection(interlinearbox.width)
@@ -123,6 +156,7 @@ SILE.registerCommand("item", function (options, content)
     end)
   end)
   cbox = SILE.typesetter.state.nodes[#SILE.typesetter.state.nodes]
+  cbox.isGreekBox = true
   SU.debug("interlinear", "base box is " .. cbox)
   SU.debug("interlinear", "vernacular is  " .. interlinearbox)
   if cbox:lineContribution() > interlinearbox:lineContribution() then
@@ -140,6 +174,11 @@ SILE.registerCommand("item", function (options, content)
     table.insert(cbox.value, 1, SILE.nodefactory.newGlue({ width = to_insert }))
     table.insert(cbox.value, SILE.nodefactory.newGlue({ width = to_insert }))
   end
+  -- table.insert(cbox.value, SILE.nodefactory.newGlue({
+  --   width = SILE.length.new({ length = 0 }),
+  --   stretch = SILE.length.new({ length = 15 })
+  -- }))
+  -- SILE.typesetter:typeset(" | ")
   SILE.scratch.lastInterlinearBox = interlinearbox
   SILE.scratch.lastInterlinearText = vernacular
 end)

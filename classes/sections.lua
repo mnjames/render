@@ -184,9 +184,13 @@ function buildConstraints ()
 end
 
 function fixCursors ()
-  for _, section in pairs(sections.types) do
-    local frame = section.typesetter.frame
+  for sectionName, section in pairs(sections.types) do
+    local typesetter = section.typesetter
+    local frame = typesetter.frame
     frame.state.cursorY = frame:top()
+    if (#typesetter.state.nodes > 0 or #typesetter.state.outputQueue > 0) and sectionName ~= "notes" then
+      SILE.outputter.rule(frame:left(), frame:bottom() - 1, frame:width(), 1)
+    end
   end
 end
 
@@ -216,6 +220,11 @@ function finishPage()
           parameter = "document.lineskip",
           value = "0.7ex"
         })
+      elseif SILE.typesetter == sections.types.interlinear.typesetter then
+        SILE.call("set", {
+          parameter = "document.lineskip",
+          value = SILE.settings.get("interlinear.lineskip")
+        })
       end
       -- if SILE.typesetter == sections.types.ssv.typesetter then
       --   local str = "SSV Line: "
@@ -225,7 +234,7 @@ function finishPage()
       --   end
       --   print(str)
       -- end
-      addRule(section.typesetter)
+      -- addRule(section.typesetter)
       SILE.typesetter:chuck()
       SILE.typesetter.frame:leave()
     end)
@@ -302,7 +311,7 @@ SILE.registerCommand(
 
 function addBidifiedNodesToList ()
   local nodes = SILE.typesetter.state.masterNodes
-  if not nodes then return end
+  if not nodes or #SILE.typesetter.state.nodes == 0 then return end
   local vboxes = bidiBoxUpNodes(SILE.typesetter)
   for _, vbox in ipairs(vboxes) do
     if vbox.nodes then
@@ -355,7 +364,6 @@ SILE.registerCommand("para", function (options, content)
   SILE.call("bidi-on")
   SILE.settings.temporarily(function ()
     SILE.call("para-"..options.style, options, content)
-    bidiBreak()
   end)
   SILE.call("bidi-off")
 end)
@@ -642,8 +650,14 @@ SILE.registerCommand("interlinear", function (options, content)
     beginSection = SILE.scratch.sections.sectionNumber,
     outputYourself = function () end
   })
-  SILE.process(content)
-  measureContribution("interlinear")
+  SILE.settings.temporarily(function ()
+    SILE.call("set", {
+      parameter = "document.lineskip",
+      value = SILE.settings.get("interlinear.lineskip")
+    })
+    SILE.process(content)
+    measureContribution("interlinear")
+  end)
 end)
 
 SILE.registerCommand("ssv-lit", function (options, content)
@@ -687,12 +701,12 @@ function sections:init()
   
   local ret = plain.init(self)
 
-  SILE.typesetter:registerPageEndHook(function ()
-    SILE.outputter:debugFrame(SILE.getFrame("interlinear"))
-    SILE.outputter:debugFrame(SILE.getFrame("ssvLit"))
-    SILE.outputter:debugFrame(SILE.getFrame("ssv"))
-    SILE.outputter:debugFrame(SILE.getFrame("notes"))
-  end)
+  -- SILE.typesetter:registerPageEndHook(function ()
+  --   SILE.outputter:debugFrame(SILE.getFrame("interlinear"))
+  --   SILE.outputter:debugFrame(SILE.getFrame("ssvLit"))
+  --   SILE.outputter:debugFrame(SILE.getFrame("ssv"))
+  --   SILE.outputter:debugFrame(SILE.getFrame("notes"))
+  -- end)
 
   sections.mainTypesetter = SILE.typesetter
   sections.mainTypesetter:init(SILE.getFrame("content"))
