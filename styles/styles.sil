@@ -1,4 +1,4 @@
-\begin[papersize=a4,class=sections]{document}
+\begin[papersize=13.5cm x 20.5cm,class=sections]{document}
 
 \script[src=packages/styles]%
 \script[src=packages/xmltricks]%

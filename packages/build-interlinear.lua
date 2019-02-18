@@ -18,15 +18,8 @@ end)
 SILE.settings.declare({
   name = "interlinear.height",
   type = "string",
-  default = "-5mm",
-  help = "Vertical offset between the interlinear and the main text"
-})
-
-SILE.settings.declare({
-  name = "interlinear.lineskip",
-  type = "string",
   default = "15pt",
-  help = "Lineskip for the interlinear"
+  help = "Vertical offset between the interlinear and the main text"
 })
 
 SILE.settings.declare({
@@ -121,15 +114,20 @@ SILE.registerCommand("item", function (options, content)
           lineWidth = lineWidth + (box:isBox() and box:scaledWidth(line) or box.width)
         end
       end
-      local bottom = typesetter.frame.state.cursorY
+      local bottom = typesetter.frame.state.cursorY + 4
       local width = typesetter.frame:width()
       if not line.nodes[#line.nodes]:isPenalty() then
         line._adjustment = (width - lineWidth.length) / (numWords - 1)
       else
         line._adjustment = 0
       end
+      local top = bottom - 14
+      if top - typesetter.frame:top() < 5 then
+        top = typesetter.frame:top()
+      end
+      local buffer = SILE.settings.get("sections.borderbuffer")
       SILE.outputter:pushColor(SILE.colorparser("green"))
-      SILE.outputter.rule(typesetter.frame:left(), bottom - 10, width, 14)
+      SILE.outputter.rule(typesetter.frame:left() - buffer, top, width + 2*buffer, bottom - top)
       SILE.outputter:popColor()
     else
       typesetter.frame:advanceWritingDirection(line._adjustment)
@@ -137,7 +135,7 @@ SILE.registerCommand("item", function (options, content)
     local ox = typesetter.frame.state.cursorX
     local oy = typesetter.frame.state.cursorY
     typesetter.frame:advanceWritingDirection(interlinearbox.width)
-    typesetter.frame:advancePageDirection(-SILE.toPoints(SILE.settings.get("interlinear.height")))
+    typesetter.frame:advancePageDirection(SILE.toPoints(SILE.settings.get("interlinear.height")))
     SILE.outputter.moveTo(typesetter.frame.state.cursorX, typesetter.frame.state.cursorY)
     for i = 1, #(self.value) do
       local node = self.value[i]
