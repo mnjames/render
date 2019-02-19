@@ -580,7 +580,7 @@ function outputPages ()
   local verse = 0
   local height = 0
   local lastNoteNumber = 0
-  local nextSection
+  local currentSection
   while
     #sections.types.interlinear.queue > 0
     or #sections.types.ssvLit.queue > 0
@@ -589,6 +589,7 @@ function outputPages ()
   do
     verse = verse + 1
     local noteNumberToConsider = lastNoteNumber
+    local sectionToConsider
     local minimumContribution = 0
     -- local extraContribution = 0
     allTypesetters(function (typesetter, section, name)
@@ -602,10 +603,10 @@ function outputPages ()
         local box = table.remove(section.queue, 1)
         if not box then break end
         if box.headerContent then
-          nextSection = box.headerContent
+          sectionToConsider = box.headerContent
           if not containsVbox(section.minimumContent) and not containsVbox(section.typesetter.state.outputQueue) then
             -- This is the first line in the section, so it should appear on the page
-            SILE.scratch.headers.left = nextSection
+            currentSection = sectionToConsider
           end
         end
         table.insert(section.minimumContent, box)
@@ -645,11 +646,12 @@ function outputPages ()
         "ssvLit"
       }, SILE.scratch.sections.availableHeight - height, lastNoteNumber, verse - 1)
       -- print("Too high, breaking!")
+      SILE.scratch.headers.left = currentSection
       buildConstraints()
       doSwitch()
-      SILE.scratch.headers.left = nextSection
       height = 0
     else
+      currentSection = sectionToConsider or currentSection
       lastNoteNumber = noteNumberToConsider
       height = height + minimumContribution
       -- print("Height is now "..height)
