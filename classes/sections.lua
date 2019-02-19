@@ -53,6 +53,8 @@ SILE.settings.declare({
 
 SILE.require("packages/raiselower")
 
+SILE.scratch.headers = {}
+
 local numbers = {}
 numbers["0"] = "۰"
 numbers["1"] = "۱"
@@ -98,6 +100,13 @@ sections:defineMaster({
       top = "5%ph",
       height = "0",
       bottom = "top(interlinear)"
+    },
+    runningHead = {
+      right = "right(content)",
+      left = "left(content)",
+      bottom = "top(interlinear) - 8px",
+      height = "14px",
+      direction = "RTL"
     },
     content = {
       right = "94%pw",
@@ -303,6 +312,21 @@ end
 -- end
 
 function finishPage()
+  if SILE.scratch.sections.chapterBegun then
+    SILE.typesetter = sections.mainTypesetter
+    SILE.typesetNaturally(SILE.getFrame("runningHead"), function ()
+      local side = sections.pageTemplate == SILE.scratch.masters.right and "right" or "left"
+      SILE.call("bidi-on")
+      SILE.call("noindent")
+      SILE.settings.set("current.parindent", SILE.nodefactory.zeroGlue)
+      SILE.settings.set("document.lskip", SILE.nodefactory.zeroGlue)
+      SILE.settings.set("document.rskip", SILE.nodefactory.zeroGlue)
+      SILE.call("font", { size = 8 })
+      local options = {}
+      options[side] = true
+      SILE.call("ragged", options, SILE.scratch.headers[side])
+    end)
+  end
   for _, section in pairs(sections.types) do
     SILE.typesetter = section.typesetter
     SILE.settings.temporarily(function ()
@@ -459,6 +483,12 @@ SILE.registerCommand("para", function (options, content)
   SILE.settings.temporarily(function ()
     SILE.call("para-"..options.style, options, content)
   end)
+  if options.style == "s" then
+    local queue = SILE.typesetter.state.outputQueue
+    queue[#queue].headerContent = content
+  elseif options.style == "mt" then
+    SILE.scratch.headers.right = content
+  end
   -- SILE.call("bidi-off")
 end)
 
@@ -471,6 +501,7 @@ SILE.registerCommand("chapter", function (options, content)
   if options.number == "1" then
     doSwitch()
   end
+  SILE.scratch.sections.chapterBegun = true
   SILE.scratch.sections.notesNumber = 1
   local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
   SILE.scratch.sections.ssvChapter = chapterNumber
@@ -549,6 +580,7 @@ function outputPages ()
   local verse = 0
   local height = 0
   local lastNoteNumber = 0
+  local nextSection
   while
     #sections.types.interlinear.queue > 0
     or #sections.types.ssvLit.queue > 0
@@ -569,6 +601,13 @@ function outputPages ()
       while true do
         local box = table.remove(section.queue, 1)
         if not box then break end
+        if box.headerContent then
+          nextSection = box.headerContent
+          if not containsVbox(section.minimumContent) and not containsVbox(section.typesetter.state.outputQueue) then
+            -- This is the first line in the section, so it should appear on the page
+            SILE.scratch.headers.left = nextSection
+          end
+        end
         table.insert(section.minimumContent, box)
         if box:isVbox() then
           if box.notes and #box.notes > 0 then
@@ -587,7 +626,7 @@ function outputPages ()
             end
           end
           if #box.verses > 0 then
-            section.lastBreakpoint = box.verses[#box.verses]
+            section.breakpointToConsider = box.verses[#box.verses]
             break
           end
         end
@@ -604,10 +643,11 @@ function outputPages ()
         "ssv",
         "interlinear",
         "ssvLit"
-      }, SILE.scratch.sections.availableHeight - height, lastNoteNumber, verse)
+      }, SILE.scratch.sections.availableHeight - height, lastNoteNumber, verse - 1)
       -- print("Too high, breaking!")
       buildConstraints()
       doSwitch()
+      SILE.scratch.headers.left = nextSection
       height = 0
     else
       lastNoteNumber = noteNumberToConsider
@@ -615,6 +655,8 @@ function outputPages ()
       -- print("Height is now "..height)
     end
     allTypesetters(function (typesetter, section)
+      section.lastBreakpoint = section.breakpointToConsider or verse
+      section.breakpointToConsider = nil
       local content = section.minimumContent
       if content then
         if notEnoughSpace then
@@ -636,7 +678,6 @@ end
 function addAsMuchAsPossible (toCheck, availableHeight, notesNumber, verse)
   local section = sections.types.notes
   local content = section.minimumContent
-  print("Considering "..notesNumber, #content.." lines")
   if #content == 0 then content = section.queue end
   if #content > 0 then
     while
@@ -656,13 +697,39 @@ function addAsMuchAsPossible (toCheck, availableHeight, notesNumber, verse)
       until box:isVbox()
     end
   end
-  -- local stillGoing = {}
-  -- for _, sectionName in ipairs(toCheck) do
-  --   local section = sections.types[sectionName]
-  --   local content = section.minimumContribution
-  --   if #content > 0 and shouldAddNextLine(content, availableHeight, verse) then
-  --   end
-  -- end
+  print("Considering adding lines for verse "..verse)
+  addOneAtATime (toCheck, availableHeight, verse)
+end
+
+function addOneAtATime (toCheck, availableHeight, verse)
+  local stillGoing = {}
+  for _, sectionName in ipairs(toCheck) do
+    local section = sections.types[sectionName]
+    if section.lastBreakpoint <= verse then
+      local content = section.minimumContent
+      if #content == 0 then content = section.queue end
+      if
+        #content > 0
+        and shouldAddNextLine(content, availableHeight, function (vbox)
+          return #vbox.verses > 0 and vbox.verses[#vbox.verses] > verse
+        end)
+      then
+        print("Adding line for "..sectionName)
+        table.insert(stillGoing, sectionName)
+        local box
+        repeat
+          box = table.remove(content, 1)
+          if box:isVbox() then
+            availableHeight = availableHeight - box.height - box.depth
+          elseif box:isVglue() then
+            availableHeight = availableHeight - box.height
+          end
+          table.insert(section.typesetter.state.outputQueue, box)
+        until box:isVbox()
+      end
+    end
+  end
+  if #stillGoing > 0 then addOneAtATime(stillGoing, availableHeight, verse) end
 end
 
 function shouldAddNextLine (content, availableHeight, isBad)
@@ -681,6 +748,13 @@ function shouldAddNextLine (content, availableHeight, isBad)
   if not foundVbox then return false end
   if type(height) == "table" then height = height.length end
   return height <= availableHeight
+end
+
+function containsVbox (queue)
+  for _, box in ipairs(queue) do
+    if box:isVbox() then return true end
+  end
+  return false
 end
 
 -- function createCarryOver (overFill)
