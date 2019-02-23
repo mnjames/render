@@ -227,11 +227,14 @@ function buildConstraints ()
   -- setHeight(ssvFrame, "ssv")
   -- setHeight(notesFrame, "notes")
   allTypesetters(function (typesetter, section, name)
-    local extra = (name == "interlinear") and SILE.toPoints(SILE.settings.get("interlinear.height")) or 0
-    typesetter.frame:constrain("height", measureHeight(typesetter.state.outputQueue) + extra)
+    local height = measureHeight(typesetter.state.outputQueue)
+    if height > 0 and name == "interlinear" then
+      height = height + SILE.toPoints(SILE.settings.get("interlinear.height"))
+    end
+    typesetter.frame:constrain("height", height)
   end)
-  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..SILE.settings.get("sections.interlinearskip"))
-  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..SILE.settings.get("sections.ssvlitskip"))
+  ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..(interlinearFrame:height() > 0 and SILE.settings.get("sections.interlinearskip")) or "0")
+  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..(ssvLitFrame:height() > 0 and SILE.settings.get("sections.ssvlitskip")) or "0")
   notesFrame:constrain("bottom", "top(folio) - "..SILE.settings.get("sections.notesskip"))
   local buffer = SILE.settings.get("sections.borderbuffer")
   local borderWidth = 5
@@ -270,7 +273,7 @@ function buildConstraints ()
     )
     SILE.outputter:popColor()
   end
-  if #ssvTypesetter.state.outputQueue > 0 then
+  if #notesTypesetter.state.outputQueue > 0 then
     SILE.outputter:pushColor(SILE.colorparser(SILE.settings.get("sections.notesseparator")))
     local location = notesFrame:top() - SILE.settings.get("sections.ssvskip").length / 2
     SILE.outputter.rule(ssvFrame:left(), location, ssvFrame:width(), 1)
@@ -321,7 +324,7 @@ function finishPage()
       SILE.settings.set("current.parindent", SILE.nodefactory.zeroGlue)
       SILE.settings.set("document.lskip", SILE.nodefactory.zeroGlue)
       SILE.settings.set("document.rskip", SILE.nodefactory.zeroGlue)
-      SILE.call("font", { size = 8 })
+      SILE.call("font", { size = 7 })
       local options = {}
       options[side] = true
       SILE.call("ragged", options, SILE.scratch.headers[side])
@@ -411,12 +414,11 @@ SILE.registerCommand(
       "font",
       {size = "14pt"},
       function ()
-        local n1,n2
         if string.match(options.number, "-") then
-          n1, n2 = string.match(options.number, "(%d+)-(%d+)")
+          local gen = string.gmatch(options.number, "(%d+)")
           SILE.typesetter:typeset(
-            SU.utf8charfromcodepoint("U+06DD")..toArabic(n1)..SU.utf8charfromcodepoint("U+200F").."-"..
-            SU.utf8charfromcodepoint("U+06DD")..toArabic(n2)..SU.utf8charfromcodepoint("U+200F").." "
+            SU.utf8charfromcodepoint("U+06DD")..toArabic(gen())..SU.utf8charfromcodepoint("U+200F").."-"..
+            SU.utf8charfromcodepoint("U+06DD")..toArabic(gen())..SU.utf8charfromcodepoint("U+200F").." "
           )
         else
           SILE.typesetter:typeset(SU.utf8charfromcodepoint("U+06DD")..toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." ")
@@ -585,7 +587,7 @@ function outputPages ()
     #sections.types.interlinear.queue > 0
     or #sections.types.ssvLit.queue > 0
     or #sections.types.ssv.queue > 0
-    or #sections.types.notes.queue > 0
+    -- or #sections.types.notes.queue > 0
   do
     verse = verse + 1
     local noteNumberToConsider = lastNoteNumber
@@ -621,7 +623,6 @@ function outputPages ()
               table.insert(notesSection.minimumContent, notesBox)
               if
                 notesBox:isVbox()
-                and notesBox.notesNumber
                 and notesBox.notesNumber == noteNumberToConsider
               then break end
             end
@@ -673,19 +674,38 @@ function outputPages ()
       end
     end)
   end
+  if #sections.types.notes.queue > 0 then
+    addNotesAsPossible(
+      SILE.scratch.sections.availableHeight - height,
+      nil,
+      sections.types.notes.queue
+    )
+  end
+  if #sections.types.notes.queue > 0 then
+    -- Still haven't finished the notes, get them out
+    buildConstraints()
+    doSwitch()
+    sections.types.notes.typesetter.state.outputQueue = sections.types.notes.queue
+  end
   buildConstraints()
   finishPage()
 end
 
-function addAsMuchAsPossible (toCheck, availableHeight, notesNumber, verse)
+function addNotesAsPossible (availableHeight, notesNumber, content)
+  local isBad
+  if notesNumber then
+    isBad = function (vbox)
+      return vbox.notesNumber and vbox.notesNumber > notesNumber
+    end
+  else
+    isBad = function () return false end
+  end
   local section = sections.types.notes
-  local content = section.minimumContent
+  content = content or section.minimumContent
   if #content == 0 then content = section.queue end
   if #content > 0 then
     while
-      shouldAddNextLine(content, availableHeight, function (vbox)
-        return vbox.notesNumber and vbox.notesNumber > notesNumber
-      end)
+      shouldAddNextLine(content, availableHeight, isBad)
     do
       local box
       repeat
@@ -699,8 +719,15 @@ function addAsMuchAsPossible (toCheck, availableHeight, notesNumber, verse)
       until box:isVbox()
     end
   end
-  print("Considering adding lines for verse "..verse)
-  addOneAtATime (toCheck, availableHeight, verse)
+  return availableHeight
+end
+
+function addAsMuchAsPossible (toCheck, availableHeight, notesNumber, verse)
+  availableHeight = addNotesAsPossible(availableHeight, notesNumber)
+  if availableHeight > 0 then
+    SU.debug("sectionbreak", "Considering adding lines for verse "..verse)
+    addOneAtATime (toCheck, availableHeight, verse)
+  end
 end
 
 function addOneAtATime (toCheck, availableHeight, verse)
@@ -708,16 +735,53 @@ function addOneAtATime (toCheck, availableHeight, verse)
   for _, sectionName in ipairs(toCheck) do
     local section = sections.types[sectionName]
     if section.lastBreakpoint <= verse then
+      SU.debug("sectionbreak", "Should we add a line for "..sectionName.."?")
       local content = section.minimumContent
-      if #content == 0 then content = section.queue end
-      if
-        #content > 0
-        and shouldAddNextLine(content, availableHeight, function (vbox)
-          return #vbox.verses > 0 and vbox.verses[#vbox.verses] > verse
+      local shouldAdd = #content > 0
+      if shouldAdd then
+        SU.debug("sectionbreak", "It has content...")
+        shouldAdd, availableHeight = shouldAddNextLine(content, availableHeight, function (vbox, height, availableHeight)
+          local isBadLine = #vbox.verses > 0
+            and vbox.verses[#vbox.verses] > verse
+          SU.debug("sectionbreak", "The next line contains a future verse: "..isBadLine)
+          if not isBadLine and vbox.notes and #vbox.notes > 0 then
+            -- We need to check if this line contains verses, and break accordingly
+            local notesSection = sections.types.notes
+            local noteNumberToConsider = vbox.notes[#vbox.notes]
+            SU.debug("sectionbreak", "We need to at least start note "..noteNumberToConsider)
+            local queue = {}
+            while true do
+              local notesBox = table.remove(notesSection.minimumContent, 1)
+              if not notesBox then notesBox = table.remove(notesSection.queue, 1) end
+              if not notesBox then break end
+              table.insert(queue, notesBox)
+              SU.debug("sectionbreak", "Adding "..notesBox)
+              if
+                notesBox.notesNumber == noteNumberToConsider
+              then break end
+            end
+            local newAvailableHeight = availableHeight - measureHeight(queue)
+            if height > newAvailableHeight then
+              -- We can add the line, but not the notes. Undo removal.
+              for index, box in ipairs(queue) do
+                table.insert(notesSection.queue, index, box)
+              end
+              return true
+            else
+              -- We can add the line and the notes. Commit.
+              for _, box in ipairs(queue) do
+                table.insert(notesSection.typesetter.state.outputQueue, box)
+              end
+              newAvailableHeight = addNotesAsPossible(newAvailableHeight, noteNumberToConsider)
+              SU.debug("sectionbreak", "Adding line with notes!")
+              return false, newAvailableHeight
+            end
+          end
+          return isBadLine
         end)
-      then
-        print("Adding line for "..sectionName)
-        table.insert(stillGoing, sectionName)
+      end
+      if shouldAdd then
+        SU.debug("sectionbreak", "Yes!")
         local box
         repeat
           box = table.remove(content, 1)
@@ -728,6 +792,9 @@ function addOneAtATime (toCheck, availableHeight, verse)
           end
           table.insert(section.typesetter.state.outputQueue, box)
         until box:isVbox()
+        if #content > 0 then
+          table.insert(stillGoing, sectionName)
+        end
       end
     end
   end
@@ -739,17 +806,19 @@ function shouldAddNextLine (content, availableHeight, isBad)
   local height = 0
   for _, vbox in ipairs(content) do
     if (vbox:isVbox()) then
-      if isBad(vbox) then return false end
       foundVbox = true
       height = height + vbox.height + vbox.depth
+      local isBadLine, newAvailableHeight = isBad(vbox, height, availableHeight)
+      if isBadLine then return false, availableHeight end
+      if newAvailableHeight then availableHeight = newAvailableHeight end
       break
     elseif vbox:isVglue() then
       height = height + vbox.height
     end
   end
-  if not foundVbox then return false end
+  if not foundVbox then return false, availableHeight end
   if type(height) == "table" then height = height.length end
-  return height <= availableHeight
+  return height <= availableHeight, availableHeight
 end
 
 function containsVbox (queue)
@@ -1071,8 +1140,11 @@ SILE.registerCommand("note", function (options, content)
   SILE.call("raise", {height = "5pt"}, function ()
     SILE.Commands["font"]({ size = "1.5ex" }, function()
       SILE.typesetter:typeset(
-        footnoteMark
-        ..toArabic(tostring(SILE.scratch.sections.notesNumber)..SU.utf8charfromcodepoint("U+200F").." ")
+        SU.utf8charfromcodepoint("U+200F")
+        ..footnoteMark
+        ..toArabic(tostring(SILE.scratch.sections.notesNumber)
+        ..SU.utf8charfromcodepoint("U+200F")
+        .." ")
       )
     end)
   end)
@@ -1084,15 +1156,18 @@ SILE.registerCommand("note", function (options, content)
   })
   SILE.settings.temporarily(function ()
     -- SILE.call("font", {size = "12pt"})
-    SILE.typesetter:typeset(
-      footnoteMark
-      ..toArabic(tostring(SILE.scratch.sections.notesNumber).." ")
-    )
     SILE.call("font", {size = "9pt"})
     SILE.call("set", {
       parameter = "document.lineskip",
       value = "0.7ex"
     })
+    SILE.typesetter:typeset(
+      SU.utf8charfromcodepoint("U+200F")
+      ..footnoteMark
+      ..toArabic(tostring(SILE.scratch.sections.notesNumber)
+      ..SU.utf8charfromcodepoint("U+200F")
+      .." ")
+    )
     SILE.process(content)
     SILE.typesetter:leaveHmode(true)
   end)
