@@ -487,7 +487,13 @@ SILE.registerCommand("para", function (options, content)
   end)
   if options.style == "s" then
     local queue = SILE.typesetter.state.outputQueue
-    queue[#queue].headerContent = content
+    for i=#queue, 1, -1 do
+      local box = queue[i]
+      if box:isVbox() then
+        box.headerContent = content
+        break
+      end
+    end
   elseif options.style == "mt" then
     SILE.scratch.headers.right = content
   end
@@ -582,7 +588,6 @@ function outputPages ()
   local verse = 0
   local height = 0
   local lastNoteNumber = 0
-  local currentSection
   while
     #sections.types.interlinear.queue > 0
     or #sections.types.ssvLit.queue > 0
@@ -591,7 +596,6 @@ function outputPages ()
   do
     verse = verse + 1
     local noteNumberToConsider = lastNoteNumber
-    local sectionToConsider
     local minimumContribution = 0
     -- local extraContribution = 0
     allTypesetters(function (typesetter, section, name)
@@ -604,13 +608,6 @@ function outputPages ()
       while true do
         local box = table.remove(section.queue, 1)
         if not box then break end
-        if box.headerContent then
-          sectionToConsider = box.headerContent
-          if not containsVbox(section.minimumContent) and not containsVbox(section.typesetter.state.outputQueue) then
-            -- This is the first line in the section, so it should appear on the page
-            currentSection = sectionToConsider
-          end
-        end
         table.insert(section.minimumContent, box)
         if box:isVbox() then
           if box.notes and #box.notes > 0 then
@@ -647,12 +644,20 @@ function outputPages ()
         "ssvLit"
       }, SILE.scratch.sections.availableHeight - height, lastNoteNumber, verse - 1)
       -- print("Too high, breaking!")
-      SILE.scratch.headers.left = currentSection
+      local ssvQueue = sections.types.ssv.typesetter.state.outputQueue
+      local firstVbox = findNextVBox(ssvQueue)
+      SILE.scratch.headers.left = (firstVbox and firstVbox.headerContent) or SILE.scratch.sections.lastHeader
+      for i=#ssvQueue, 1, -1 do
+        local box = ssvQueue[i]
+        if box.headerContent then
+          SILE.scratch.sections.lastHeader = box.headerContent
+          break
+        end
+      end
       buildConstraints()
       doSwitch()
       height = 0
     else
-      currentSection = sectionToConsider or currentSection
       lastNoteNumber = noteNumberToConsider
       height = height + minimumContribution
       -- print("Height is now "..height)
