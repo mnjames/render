@@ -128,31 +128,52 @@ local buildOrder = {
 -- @return the length of the parent table
 -- @return a new node that ???
 function createNested (parent, child, tag, index)
-
+  local nodesToAdd = {}
+  local sectionNumber
+  if string.match(child.attr.number, "-") then
+    local gen = string.gmatch(child.attr.number, "%d+")
+    sectionNumber = gen()
+    local lastVerse = tonumber(gen())
+    local extraVerses = lastVerse - tonumber(sectionNumber)
+    for i=tonumber(sectionNumber) + 1,lastVerse do
+      table.insert(nodesToAdd, {
+        attr = {
+          "number",
+          "type",
+          number = tostring(i),
+          type = tag
+        },
+        tag = "section"
+      })
+    end
+  else
+    sectionNumber = child.attr.number
+  end
   -- Generic nested node
   local nested = {
     attr = {
       "number",
       "type",
-      number = child.attr.number,
+      number = sectionNumber,
       type = tag
     },
     tag = "section"
   }
-
+  table.insert(nodesToAdd, 1, nested)
+  local blanksToAdd
   if tag == "verse" then
     table.insert(nested, { attr = child.attr,  tag = child.tag } )
   end
 
   for i = index, #parent do
     if parent[i].tag == tag or parent[i].tag == "chapter" then
-      return i - 1, nested
+      return i - 1, nodesToAdd
     end
     table.insert(nested, parent[i])  -- append to nested
   end
 
   -- Return the length of the parent and the nested node
-  return #parent, nested
+  return #parent, nodesToAdd
 end
 
 --- -------------------------------------------------------------------
@@ -168,15 +189,20 @@ function nest (xml, tag)
   }
 
   local child
+  local children
   local i = 0
   local length = #xml
   while i < length do
     i = i + 1
     child = xml[i]
     if child.tag == tag then
-      i, child = createNested(xml, child, tag, i + 1)
+      i, children = createNested(xml, child, tag, i + 1)
+      for _, node in ipairs(children) do
+        table.insert(nested, node)
+      end
+    else
+      table.insert(nested, child)
     end
-    table.insert(nested, child)
     -- table.insert(nested, child[1])
     -- table.insert(nested, child[2])
   end
