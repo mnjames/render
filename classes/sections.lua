@@ -487,10 +487,14 @@ SILE.registerCommand("para", function (options, content)
   end)
   if options.style == "s" then
     local queue = SILE.typesetter.state.outputQueue
+    local strippedContent = {}
+    for _, item in ipairs(content) do
+      if item.tag ~= "note" then table.insert(strippedContent, item) end
+    end
     for i=#queue, 1, -1 do
       local box = queue[i]
       if box:isVbox() then
-        box.headerContent = content
+        box.headerContent = strippedContent
         break
       end
     end
