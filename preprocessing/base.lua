@@ -4,6 +4,15 @@ string.trim = function (str)
   return string.gsub(string.gsub(str, '^%s+', ''), '%s+$', '')
 end
 
+local function escape(s)
+	s = string.gsub(s, "&", "&amp;")
+	s = string.gsub(s, "<", "&lt;")
+	s = string.gsub(s, ">", "&gt;")
+	s = string.gsub(s, "'", "&apos;")
+	s = string.gsub(s, '"', "&quot;")
+	return s
+end
+
 package.path = package.path..";../?.lua"
 
 base.readFile = function (file)
@@ -43,7 +52,7 @@ base.deparse = function (xml, maxChap, maxVerse)
     if type(xml) == "string" and xml:match("%S") == nil then
       xml = ""
     end
-    return xml
+    return escape(xml)
   end
   if maxChap and xml.tag == "chapter" and tonumber(xml.attr.number) > maxChap then return ""
   elseif maxVerse and xml.tag == "verse-section" then
