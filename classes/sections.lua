@@ -651,11 +651,27 @@ function outputPages ()
       local ssvQueue = sections.types.ssv.typesetter.state.outputQueue
       local firstVbox = findNextVBox(ssvQueue)
       SILE.scratch.headers.left = (firstVbox and firstVbox.headerContent) or SILE.scratch.sections.lastHeader
+      local lastVbox
       for i=#ssvQueue, 1, -1 do
         local box = ssvQueue[i]
+        if not lastVbox and box:isVbox() then lastVbox = box end
         if box.headerContent then
           SILE.scratch.sections.lastHeader = box.headerContent
           break
+        end
+      end
+      if lastVbox.headerContent then
+        local removeNotesTo = lastVbox.notes[1]
+        local box
+        repeat
+          box = table.remove(ssvQueue)
+          table.insert(sections.types.ssv.minimumContent, 1, box)
+        until box == lastVbox
+        if removeNotesTo then
+          repeat
+            box = table.remove(sections.types.notes.typesetter.state.outputQueue)
+            table.insert(sections.types.notes.minimumContent, 1, box)
+          until box.notesNumber == removeNotesTo
         end
       end
       buildConstraints()
@@ -1131,12 +1147,15 @@ end)
 
 SILE.registerCommand("ssv", function (options, content)
   SILE.typesetter = sections.types.ssv.typesetter
-  renderChapter("ssv", content)
-  SILE.typesetter:pushHbox({
-    beginSection = SILE.scratch.sections.sectionNumber,
-    outputYourself = emptyFunction
-  })
-  SILE.process(content)
+  SILE.settings.temporarily(function ()
+    SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("1cm"))
+    renderChapter("ssv", content)
+    SILE.typesetter:pushHbox({
+      beginSection = SILE.scratch.sections.sectionNumber,
+      outputYourself = emptyFunction
+    })
+    SILE.process(content)
+  end)
   -- processWithBidi(content)
   -- measureContribution("ssv")
 end)
@@ -1159,16 +1178,24 @@ SILE.registerCommand("note", function (options, content)
   end)
   local oldTypesetter = SILE.typesetter
   SILE.typesetter = sections.types.notes.typesetter
-  SILE.typesetter:pushHbox({
-    notesNumber = SILE.scratch.sections.notesNumber,
-    outputYourself = emptyFunction
-  })
   SILE.settings.temporarily(function ()
     -- SILE.call("font", {size = "12pt"})
     SILE.call("font", {size = "9pt"})
     SILE.call("set", {
       parameter = "document.lineskip",
       value = "0.7ex"
+    })
+    SILE.call("set", {
+      parameter = "document.rskip",
+      value = "1cm"
+    })
+    SILE.call("set", {
+      parameter = "current.parindent",
+      value = "-1cm"
+    })
+    SILE.typesetter:pushHbox({
+      notesNumber = SILE.scratch.sections.notesNumber,
+      outputYourself = emptyFunction
     })
     SILE.typesetter:typeset(
       SU.utf8charfromcodepoint("U+200F")
