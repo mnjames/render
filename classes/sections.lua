@@ -326,7 +326,7 @@ function finishPage()
       SILE.settings.set("document.rskip", SILE.nodefactory.zeroGlue)
       SILE.call("font", { size = 7 })
       local options = {}
-      options[side] = true
+      options[side == "right" and "left" or "right"] = true
       SILE.call("ragged", options, SILE.scratch.headers[side])
     end)
   end
