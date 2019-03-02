@@ -515,6 +515,7 @@ SILE.registerCommand("chapter", function (options, content)
   end
   SILE.scratch.sections.chapterBegun = true
   SILE.scratch.sections.notesNumber = 1
+  SILE.scratch.sections.xrefNumber = 0.001
   local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
   SILE.scratch.sections.ssvChapter = chapterNumber
   SILE.scratch.sections.ssvLitChapter = chapterNumber
@@ -1161,19 +1162,29 @@ SILE.registerCommand("ssv", function (options, content)
 end)
 
 SILE.registerCommand("note", function (options, content)
+  local notesNumber = SILE.scratch.sections.notesNumber
+  local mark
+  if options.style == "f" then
+    SILE.scratch.sections.notesNumber = SILE.scratch.sections.notesNumber + 1
+    mark = SU.utf8charfromcodepoint("U+200F")
+      ..footnoteMark
+      ..toArabic(tostring(notesNumber))
+      ..SU.utf8charfromcodepoint("U+200F")
+      .." "
+  else
+    notesNumber = notesNumber - 1 + SILE.scratch.sections.xrefNumber
+    SILE.scratch.sections.xrefNumber = SILE.scratch.sections.xrefNumber + 0.001
+    mark = SU.utf8charfromcodepoint("U+2021").." "
+  end
+  print("Note: "..notesNumber)
+
   SILE.typesetter:pushHbox({
-    notesNumber = SILE.scratch.sections.notesNumber,
+    notesNumber = notesNumber,
     outputYourself = emptyFunction
   })
   SILE.call("raise", {height = "5pt"}, function ()
     SILE.Commands["font"]({ size = "1.5ex" }, function()
-      SILE.typesetter:typeset(
-        SU.utf8charfromcodepoint("U+200F")
-        ..footnoteMark
-        ..toArabic(tostring(SILE.scratch.sections.notesNumber)
-        ..SU.utf8charfromcodepoint("U+200F")
-        .." ")
-      )
+      SILE.typesetter:typeset(mark)
     end)
   end)
   local oldTypesetter = SILE.typesetter
@@ -1194,21 +1205,14 @@ SILE.registerCommand("note", function (options, content)
       value = "-1cm"
     })
     SILE.typesetter:pushHbox({
-      notesNumber = SILE.scratch.sections.notesNumber,
+      notesNumber = notesNumber,
       outputYourself = emptyFunction
     })
-    SILE.typesetter:typeset(
-      SU.utf8charfromcodepoint("U+200F")
-      ..footnoteMark
-      ..toArabic(tostring(SILE.scratch.sections.notesNumber)
-      ..SU.utf8charfromcodepoint("U+200F")
-      .." ")
-    )
+    SILE.typesetter:typeset(mark)
     SILE.process(content)
     SILE.typesetter:leaveHmode(true)
   end)
   SILE.typesetter = oldTypesetter
-  SILE.scratch.sections.notesNumber = SILE.scratch.sections.notesNumber + 1
 end)
 
 function sections:init()

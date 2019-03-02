@@ -11,9 +11,10 @@
 \define[command=chapter:mark]{\font[size=2em]{\process}}
 
 % Char Styles
-\xmltricks:ignore{char-fr char-fq char-fp}
+\xmltricks:ignore{char-fr char-fq char-fp char-xo}
 
 \define[command=char-ft]{\process}
+\define[command=char-xt]{\process}
 \define[command=char-w]{\process}
 \define[command=char-qt]{\process}
 \define[command=char-zheb]{\font[family=Times New Roman]{\process}}
