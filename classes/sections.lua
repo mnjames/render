@@ -1176,7 +1176,6 @@ SILE.registerCommand("note", function (options, content)
     SILE.scratch.sections.xrefNumber = SILE.scratch.sections.xrefNumber + 0.001
     mark = SU.utf8charfromcodepoint("U+2021").." "
   end
-  print("Note: "..notesNumber)
 
   SILE.typesetter:pushHbox({
     notesNumber = notesNumber,
