@@ -12,14 +12,14 @@ SILE.settings.declare({
 SILE.settings.declare({
   name = "sections.interlinearseparator",
   type = "string",
-  default = "green",
+  default = "#26BF8B",
   help = "The color of the line separating the Interlinear and SSV Lit sections"
 })
 
 SILE.settings.declare({
   name = "sections.notesseparator",
   type = "string",
-  default = "green",
+  default = "#26BF8B",
   help = "The color of the line separating the SSV and Notes sections"
 })
 
@@ -238,8 +238,8 @@ function buildConstraints ()
   ssvFrame:constrain("top", "bottom("..bottomFrame.id..") + "..(bottomFrame:height() > 0 and SILE.settings.get("sections.ssvlitskip")) or "0")
   notesFrame:constrain("bottom", "top(folio) - "..SILE.settings.get("sections.notesskip"))
   local buffer = SILE.settings.get("sections.borderbuffer")
-  local borderWidth = 5
-  local halfWidth = math.ceil(borderWidth / 2)
+  local borderWidth = 8
+  local halfWidth = math.ceil(borderWidth / 2) + 1
   if
     #interlinearTypesetter.state.outputQueue > 0
     and #ssvLitTypesetter.state.outputQueue > 0
@@ -253,12 +253,16 @@ function buildConstraints ()
     or #ssvLitTypesetter.state.outputQueue > 0
   then
     local extraWidth = buffer + borderWidth
+    local topY = interlinearFrame:top() - borderWidth
+    local bottomY = bottomFrame:bottom() + borderWidth + 5
+    local leftX = interlinearFrame:left() - extraWidth
+    local rightX = interlinearFrame:right() + extraWidth
     SILE.outputter:pushColor(SILE.colorparser(SILE.settings.get("sections.interlinearseparator")))
     outputFrame(
-      interlinearFrame:left() - extraWidth,
-      interlinearFrame:top() - borderWidth,
-      interlinearFrame:right() + extraWidth,
-      bottomFrame:bottom() + borderWidth + 5,
+      leftX,
+      topY,
+      rightX,
+      bottomY,
       borderWidth
     )
     SILE.outputter:popColor()
@@ -270,9 +274,71 @@ function buildConstraints ()
       interlinearFrame:top() - halfWidth,
       interlinearFrame:right() + extraWidth,
       bottomFrame:bottom() + halfWidth + 5,
-      1
+      2
     )
     SILE.outputter:popColor()
+
+    local src = SILE.resolveFile('./graphics/top_left.png') or SU.error("Couldn't find file")
+    local box_width,box_height = SILE.outputter.imageSize(src)
+    local long = box_width * borderWidth / box_height
+    if 2*long <= bottomY - topY then
+      SILE.outputter.drawImage(
+        SILE.resolveFile('./graphics/left_top.png'),
+        leftX,
+        topY,
+        borderWidth,
+        long
+      )
+      SILE.outputter.drawImage(
+        SILE.resolveFile('./graphics/left_bottom.png'),
+        leftX,
+        bottomY - long,
+        borderWidth,
+        long
+      )
+      SILE.outputter.drawImage(
+        SILE.resolveFile('./graphics/right_top.png'),
+        rightX - borderWidth,
+        topY,
+        borderWidth,
+        long
+      )
+      SILE.outputter.drawImage(
+        SILE.resolveFile('./graphics/right_bottom.png'),
+        rightX - borderWidth,
+        bottomY - long,
+        borderWidth,
+        long
+      )
+    end
+    SILE.outputter.drawImage(
+      SILE.resolveFile('./graphics/top_left.png'),
+      leftX,
+      topY,
+      long,
+      borderWidth
+    )
+    SILE.outputter.drawImage(
+      SILE.resolveFile('./graphics/bottom_left.png'),
+      leftX,
+      bottomY - borderWidth,
+      long,
+      borderWidth
+    )
+    SILE.outputter.drawImage(
+      SILE.resolveFile('./graphics/top_right.png'),
+      rightX - long,
+      topY,
+      long,
+      borderWidth
+    )
+    SILE.outputter.drawImage(
+      SILE.resolveFile('./graphics/bottom_right.png'),
+      rightX - long,
+      bottomY - borderWidth,
+      long,
+      borderWidth
+    )
   end
   if #notesTypesetter.state.outputQueue > 0 then
     SILE.outputter:pushColor(SILE.colorparser(SILE.settings.get("sections.notesseparator")))
