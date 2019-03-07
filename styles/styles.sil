@@ -10,6 +10,14 @@
 
 \define[command=chapter:mark]{\font[size=2em]{\process}}
 
+\define[command=ssv:style]{%
+\font[family=Awami Nastaliq, size=11pt]%
+\set[parameter=document.parindent,value=1cm]%
+}
+\define[command=ssvLit:style]{%
+\font[family=Scheherazade, size=11pt]%
+}
+
 % Char Styles
 \xmltricks:ignore{char-fr char-fq char-fp char-xo}
 

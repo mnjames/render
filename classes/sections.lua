@@ -233,8 +233,9 @@ function buildConstraints ()
     end
     typesetter.frame:constrain("height", height)
   end)
+  local bottomFrame = ssvLitFrame:height() > 0 and ssvLitFrame or interlinearFrame
   ssvLitFrame:constrain("top", "bottom("..interlinearFrame.id..") + "..(interlinearFrame:height() > 0 and SILE.settings.get("sections.interlinearskip")) or "0")
-  ssvFrame:constrain("top", "bottom("..ssvLitFrame.id..") + "..(ssvLitFrame:height() > 0 and SILE.settings.get("sections.ssvlitskip")) or "0")
+  ssvFrame:constrain("top", "bottom("..bottomFrame.id..") + "..(bottomFrame:height() > 0 and SILE.settings.get("sections.ssvlitskip")) or "0")
   notesFrame:constrain("bottom", "top(folio) - "..SILE.settings.get("sections.notesskip"))
   local buffer = SILE.settings.get("sections.borderbuffer")
   local borderWidth = 5
@@ -257,7 +258,7 @@ function buildConstraints ()
       interlinearFrame:left() - extraWidth,
       interlinearFrame:top() - borderWidth,
       interlinearFrame:right() + extraWidth,
-      ssvLitFrame:bottom() + borderWidth + 5,
+      bottomFrame:bottom() + borderWidth + 5,
       borderWidth
     )
     SILE.outputter:popColor()
@@ -268,7 +269,7 @@ function buildConstraints ()
       interlinearFrame:left() - extraWidth,
       interlinearFrame:top() - halfWidth,
       interlinearFrame:right() + extraWidth,
-      ssvLitFrame:bottom() + halfWidth + 5,
+      bottomFrame:bottom() + halfWidth + 5,
       1
     )
     SILE.outputter:popColor()
@@ -1136,12 +1137,15 @@ end)
 
 SILE.registerCommand("ssv-lit", function (options, content)
   SILE.typesetter = sections.types.ssvLit.typesetter
-  renderChapter("ssvLit", content)
-  SILE.typesetter:pushHbox({
-    beginSection = SILE.scratch.sections.sectionNumber,
-    outputYourself = emptyFunction
-  })
-  SILE.process(content)
+  SILE.settings.temporarily(function ()
+    SILE.call("ssvLit:style")
+    renderChapter("ssvLit", content)
+    SILE.typesetter:pushHbox({
+      beginSection = SILE.scratch.sections.sectionNumber,
+      outputYourself = emptyFunction
+    })
+    SILE.process(content)
+  end)
   -- processWithBidi(content)
   -- measureContribution("ssvLit")
 end)
@@ -1149,7 +1153,8 @@ end)
 SILE.registerCommand("ssv", function (options, content)
   SILE.typesetter = sections.types.ssv.typesetter
   SILE.settings.temporarily(function ()
-    SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("1cm"))
+    SILE.call("ssv:style")
+    -- SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("1cm"))
     renderChapter("ssv", content)
     SILE.typesetter:pushHbox({
       beginSection = SILE.scratch.sections.sectionNumber,
