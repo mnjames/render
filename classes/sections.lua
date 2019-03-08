@@ -82,7 +82,9 @@ function writeFile (file, data)
 end
 
 SILE.scratch.sections = {
-  sectionNumber = 0
+  sectionNumber = 0,
+  lastChapterLastNote = 0,
+  lastChapterLastVerse = 0
 }
 
 sections:loadPackage("masters")
@@ -576,16 +578,29 @@ SILE.registerCommand("para-end", function ()
   SILE.typesetter:leaveHmode(true)
 end)
 
+SILE.registerCommand("optbreak", function ()
+  SILE.typesetter:typeset("//")
+end)
+
 SILE.registerCommand("chapter", function (options, content)
   if options.number == "1" then
     doSwitch()
   end
+  local chapterNumber = tonumber(options.number)
   SILE.scratch.sections.chapterBegun = true
   SILE.scratch.sections.notesNumber = 1
   SILE.scratch.sections.xrefNumber = 0.001
-  local chapterNumber = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
-  SILE.scratch.sections.ssvChapter = chapterNumber
-  SILE.scratch.sections.ssvLitChapter = chapterNumber
+  local chapterMark = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
+  SILE.scratch.sections.ssvChapter = chapterMark
+  SILE.scratch.sections.ssvLitChapter = chapterMark
+  -- allTypesetters(function (typesetter, section, name)
+  --   if name ~= "notes" then
+  --     typesetter:pushHbox({
+  --       shouldReset = true,
+  --       outputYourself = emptyFunction
+  --     })
+  --   end
+  -- end)
   SILE.process(content)
   allTypesetters(function (typesetter, section, name)
     SILE.settings.temporarily(function ()
@@ -600,10 +615,12 @@ SILE.registerCommand("chapter", function (options, content)
     section.queue = typesetter.state.outputQueue
     if name == "interlinear" or name == "ssvLit" or name == "ssv" then
       for _, box in ipairs(section.queue) do
+        box.chapterNumber = box.chapterNumber or chapterNumber
         if box:isVbox() then
           box.verses = {}
           for _, node in ipairs(box.nodes) do
             if node.beginSection then table.insert(box.verses, node.beginSection) end
+            -- if node.shouldReset then box.shouldReset = true end
           end
         end
       end
@@ -620,6 +637,7 @@ SILE.registerCommand("chapter", function (options, content)
     end
     if name == "notes" then
       for _, box in ipairs(section.queue) do
+        box.chapterNumber = box.chapterNumber or chapterNumber
         if box:isVbox() then
           for _, node in ipairs(box.nodes) do
             if node.notesNumber then
@@ -632,7 +650,7 @@ SILE.registerCommand("chapter", function (options, content)
     end
     typesetter.state.outputQueue = {}
   end)
-  outputPages()
+  outputPages(chapterNumber)
 end)
 
 function measureHeight (vboxes)
@@ -652,14 +670,17 @@ function measureHeight (vboxes)
   return height
 end
 
-function outputPages ()
-  allTypesetters(function (typesetter, section)
-    section.lastHeight = 0
-    section.lastBreakpoint = 0
-  end)
+function outputPages (chapterNumber)
   local verse = 0
   local height = 0
   local lastNoteNumber = 0
+  allTypesetters(function (typesetter, section)
+    while section.queue[1].chapterNumber < chapterNumber do
+      table.insert(typesetter.state.outputQueue, table.remove(section.queue, 1))
+    end
+    height = height + measureHeight(typesetter.state.outputQueue)
+    section.lastBreakpoint = 0
+  end)
   while
     #sections.types.interlinear.queue > 0
     or #sections.types.ssvLit.queue > 0
@@ -682,6 +703,13 @@ function outputPages ()
         if not box then break end
         table.insert(section.minimumContent, box)
         if box:isVbox() then
+          -- if box.shouldReset then
+          --   SILE.scratch.sections.lastChapterLastVerse = verse - 1
+          --   SILE.scratch.sections.lastChapterLastNote = lastNoteNumber
+          --   verse = 1
+          --   lastNoteNumber = 0
+          --   noteNumberToConsider = 0
+          -- end
           if box.notes and #box.notes > 0 then
             local notesSection = sections.types.notes
             noteNumberToConsider = box.notes[#box.notes]
@@ -714,7 +742,11 @@ function outputPages ()
         "ssv",
         "interlinear",
         "ssvLit"
-      }, SILE.scratch.sections.availableHeight - height, lastNoteNumber, verse - 1)
+      },
+        SILE.scratch.sections.availableHeight - height,
+        lastNoteNumber,
+        verse - 1
+      )
       -- print("Too high, breaking!")
       local ssvQueue = sections.types.ssv.typesetter.state.outputQueue
       local firstVbox = findNextVBox(ssvQueue)
@@ -728,7 +760,7 @@ function outputPages ()
           break
         end
       end
-      if lastVbox.headerContent then
+      if lastVbox and lastVbox.headerContent then
         local removeNotesTo = lastVbox.notes[1]
         local box
         repeat
@@ -742,6 +774,8 @@ function outputPages ()
           until box.notesNumber == removeNotesTo
         end
       end
+      -- SILE.scratch.sections.lastVerseConsidered = verse
+      -- SILE.scratch.sections.lastNoteConsidered = lastNoteNumber
       buildConstraints()
       doSwitch()
       height = 0
@@ -780,8 +814,8 @@ function outputPages ()
     doSwitch()
     sections.types.notes.typesetter.state.outputQueue = sections.types.notes.queue
   end
-  buildConstraints()
-  finishPage()
+  -- buildConstraints()
+  -- finishPage()
 end
 
 function addNotesAsPossible (availableHeight, notesNumber, content)
@@ -1346,8 +1380,8 @@ function sections:newPage()
 end
 
 function sections:finish ()
-  -- buildConstraints()
-  -- finishPage()
+  buildConstraints()
+  finishPage()
   local side = sections.pageTemplate == SILE.scratch.masters.right and "left" or "right"
   local page = SILE.scratch.counters.folio.value + 1
   writeFile("context.lua", "return {side=\""..side.."\",page="..page.."}")

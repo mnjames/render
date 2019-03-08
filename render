@@ -30,9 +30,9 @@ if [ -d output/$1 ]; then
 fi
 mkdir output/$1
 
-echo "Combining PDFs"
-PDFS=$(ls *.pdf | sort -g)
-gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
+# echo "Combining PDFs"
+# PDFS=$(ls *.pdf | sort -g)
+# gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
 
 mv *.xml output/$1
 mv *.pdf output/$1
