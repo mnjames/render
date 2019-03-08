@@ -611,7 +611,7 @@ function combine (xmls)
     },
     tag = "sections"
   }
-  if args.chapter and args.chapter == 1 then
+  if not args.chapter or args.chapter == 1 then
     local ssvChild
     local i = 1
     while true do
