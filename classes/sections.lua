@@ -728,7 +728,7 @@ function outputPages ()
           break
         end
       end
-      if lastVbox.headerContent then
+      if lastVbox and lastVbox.headerContent then
         local removeNotesTo = lastVbox.notes[1]
         local box
         repeat
