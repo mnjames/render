@@ -82,9 +82,7 @@ function writeFile (file, data)
 end
 
 SILE.scratch.sections = {
-  sectionNumber = 0,
-  lastChapterLastNote = 0,
-  lastChapterLastVerse = 0
+  sectionNumber = 0
 }
 
 sections:loadPackage("masters")
@@ -593,14 +591,6 @@ SILE.registerCommand("chapter", function (options, content)
   local chapterMark = toArabic(options.number)..SU.utf8charfromcodepoint("U+200F").." "
   SILE.scratch.sections.ssvChapter = chapterMark
   SILE.scratch.sections.ssvLitChapter = chapterMark
-  -- allTypesetters(function (typesetter, section, name)
-  --   if name ~= "notes" then
-  --     typesetter:pushHbox({
-  --       shouldReset = true,
-  --       outputYourself = emptyFunction
-  --     })
-  --   end
-  -- end)
   SILE.process(content)
   allTypesetters(function (typesetter, section, name)
     SILE.settings.temporarily(function ()
@@ -620,7 +610,6 @@ SILE.registerCommand("chapter", function (options, content)
           box.verses = {}
           for _, node in ipairs(box.nodes) do
             if node.beginSection then table.insert(box.verses, node.beginSection) end
-            -- if node.shouldReset then box.shouldReset = true end
           end
         end
       end
@@ -703,13 +692,6 @@ function outputPages (chapterNumber)
         if not box then break end
         table.insert(section.minimumContent, box)
         if box:isVbox() then
-          -- if box.shouldReset then
-          --   SILE.scratch.sections.lastChapterLastVerse = verse - 1
-          --   SILE.scratch.sections.lastChapterLastNote = lastNoteNumber
-          --   verse = 1
-          --   lastNoteNumber = 0
-          --   noteNumberToConsider = 0
-          -- end
           if box.notes and #box.notes > 0 then
             local notesSection = sections.types.notes
             noteNumberToConsider = box.notes[#box.notes]
@@ -774,8 +756,6 @@ function outputPages (chapterNumber)
           until box.notesNumber == removeNotesTo
         end
       end
-      -- SILE.scratch.sections.lastVerseConsidered = verse
-      -- SILE.scratch.sections.lastNoteConsidered = lastNoteNumber
       buildConstraints()
       doSwitch()
       height = 0
@@ -814,8 +794,6 @@ function outputPages (chapterNumber)
     doSwitch()
     sections.types.notes.typesetter.state.outputQueue = sections.types.notes.queue
   end
-  -- buildConstraints()
-  -- finishPage()
 end
 
 function addNotesAsPossible (availableHeight, notesNumber, content)
