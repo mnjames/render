@@ -527,7 +527,7 @@ function combineChapter (xmls)
 
     valid = normalize(children)
     if not valid then break end
-    if args.verse and tonumber(valid.attr.number) > args.verse then
+    if args.verse and extractNumber(valid.attr.number) > args.verse then
       break
     end
 

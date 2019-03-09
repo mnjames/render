@@ -675,7 +675,7 @@ function outputPages (chapterNumber)
   local height = 0
   local lastNoteNumber = 0
   allTypesetters(function (typesetter, section)
-    while section.queue[1].chapterNumber < chapterNumber do
+    while #section.queue > 0 and section.queue[1].chapterNumber < chapterNumber do
       table.insert(typesetter.state.outputQueue, table.remove(section.queue, 1))
     end
     height = height + measureHeight(typesetter.state.outputQueue)
