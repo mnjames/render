@@ -1,17 +1,28 @@
 #! /bin/bash
 
-if [ $# == 0 ]; then
-    echo "The 'book' argument is required."
-    exit
+if [ $# == 0 ]
+then
+  echo "The 'book' argument is required."
+  exit 1
 fi
+
+NEEDS_CONCATENATING=false
+for arg in $@
+do
+  if [ $arg == "--maxChapter" ]
+  then
+    NEEDS_CONCATENATING=true
+  fi
+done
 
 echo "Pre-processing files"
 cd preprocessing
 if [ ! -f ../books/$1/Interlinear.xml ]; then
   echo "Building the interlinear" $1
-  lua create-interlinear.lua $1
+  lua create-interlinear.lua $1 || exit 1
 fi
-lua preprocess.lua $@ && cd ..
+lua preprocess.lua $@ || exit 1
+cd ..
 
 echo "return {side=\"right\",page=1}" > context.lua
 
@@ -20,7 +31,7 @@ CHAPTERS=$(ls -v *.xml)
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS
 do
-  sile -I styles/styles.sil $CHAPTER
+  sile -I styles/styles.sil $CHAPTER || exit 1
   # sile -I styles/styles.sil $CHAPTER -d frames
   # sile -I styles/styles.sil $CHAPTER -d typesetter
 done
@@ -30,9 +41,12 @@ if [ -d output/$1 ]; then
 fi
 mkdir output/$1
 
-# echo "Combining PDFs"
-# PDFS=$(ls *.pdf | sort -g)
-# gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
+if [ $NEEDS_CONCATENATING = "true" ]
+then
+  echo "Combining PDFs"
+  PDFS=$(ls *.pdf | sort -g)
+  gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE=$1.pdf -dBATCH $PDFS
+fi
 
 mv *.xml output/$1
 mv *.pdf output/$1
