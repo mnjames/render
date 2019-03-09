@@ -63,9 +63,7 @@ end
 
 --- -------------------------------------------------------------------
 -- Local, module wide, parameters
-local chapters = {
-  merge = {}
-}
+local chapters = {}
 if args.verse then args.verse = tonumber(args.verse) end
 if args.chapter then chapters[1] = tonumber(args.chapter) end
 if args.maxChapter or args.minChapter then
@@ -73,18 +71,6 @@ if args.maxChapter or args.minChapter then
   local max = tonumber(args.maxChapter)
   for i=min, max do
     table.insert(chapters, i)
-  end
-end
-if args.merge then
-  local gen = string.gmatch(args.merge, '(%d+):(%d+)')
-  local first, second
-  while true do
-    first, second = gen()
-    if not first then break end
-    first = tonumber(first)
-    second = tonumber(second)
-    chapters[second] = "merged"
-    chapters.merge[first] = second
   end
 end
 local resolution
@@ -512,11 +498,9 @@ end
 -- @return chapter - one table that contains the nodes defining multiple pages.
 function combineChapter (xmls)
   local valid = getFirst(xmls)
-  -- local check = tonumber(valid.attr.number)
-  -- -- if args.chapter and check ~= args.chapter and check ~= chapters.merge[args.chapter] then
-  -- if check > 3 then
-  --   return
-  -- end
+  if args.chapter and tonumber(valid.attr.number) ~= args.chapter then
+    return
+  end
 
   local chapter = {
     attr = {
