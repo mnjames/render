@@ -65,7 +65,7 @@ end
 -- Local, module wide, parameters
 local chapters = {}
 if args.verse then args.verse = tonumber(args.verse) end
-if args.chapter then chapters[1] = tonumber(args.chapter) end
+if args.chapter then args.chapter = tonumber(args.chapter) end
 if args.maxChapter or args.minChapter then
   local min = args.minChapter and tonumber(args.minChapter) or 1
   local max = tonumber(args.maxChapter)
