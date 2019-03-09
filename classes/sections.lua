@@ -780,10 +780,10 @@ function outputPages (chapterNumber)
       doSwitch()
       height = 0
     else
-      lastNoteNumber = noteNumberToConsider
       height = height + minimumContribution
       -- print("Height is now "..height)
     end
+    lastNoteNumber = noteNumberToConsider
     allTypesetters(function (typesetter, section)
       section.lastBreakpoint = section.breakpointToConsider or verse
       section.breakpointToConsider = nil
@@ -867,7 +867,7 @@ function addOneAtATime (toCheck, availableHeight, verse)
       local shouldAdd = #content > 0
       if shouldAdd then
         SU.debug("sectionbreak", "It has content...")
-        shouldAdd, availableHeight = shouldAddNextLine(content, availableHeight, function (vbox, height, availableHeight)
+        shouldAdd, availableHeight = shouldAddNextLine(content, availableHeight, function (vbox, availableHeight)
           local isBadLine = #vbox.verses > 0
             and vbox.verses[#vbox.verses] > verse
           SU.debug("sectionbreak", "The next line contains a future verse: "..isBadLine)
@@ -877,9 +877,10 @@ function addOneAtATime (toCheck, availableHeight, verse)
             local noteNumberToConsider = vbox.notes[#vbox.notes]
             SU.debug("sectionbreak", "We need to at least start note "..noteNumberToConsider)
             local queue = {}
+            local notesContentQueue = notesSection.minimumContent
             while true do
-              local notesBox = table.remove(notesSection.minimumContent, 1)
-              if not notesBox then notesBox = table.remove(notesSection.queue, 1) end
+              if #notesContentQueue == 0 then notesContentQueue = notesSection.queue end
+              local notesBox = table.remove(notesContentQueue, 1)
               if not notesBox then break end
               table.insert(queue, notesBox)
               SU.debug("sectionbreak", "Adding "..notesBox)
@@ -888,14 +889,14 @@ function addOneAtATime (toCheck, availableHeight, verse)
               then break end
             end
             local newAvailableHeight = availableHeight - measureHeight(queue)
-            if height > newAvailableHeight then
-              -- We can add the line, but not the notes. Undo removal.
+            if newAvailableHeight < 0 then
+              SU.debug("sectionbreak", "We can add the line, but not the notes. Undo removal.")
               for index, box in ipairs(queue) do
-                table.insert(notesSection.queue, index, box)
+                table.insert(notesContentQueue, index, box)
               end
               return true
             else
-              -- We can add the line and the notes. Commit.
+              SU.debug("sectionbreak", "We can add the line and the notes. Commit.")
               for _, box in ipairs(queue) do
                 table.insert(notesSection.typesetter.state.outputQueue, box)
               end
@@ -929,23 +930,21 @@ function addOneAtATime (toCheck, availableHeight, verse)
 end
 
 function shouldAddNextLine (content, availableHeight, isBad)
-  local foundVbox = false
   local height = 0
   for _, vbox in ipairs(content) do
     if (vbox:isVbox()) then
-      foundVbox = true
       height = height + vbox.height + vbox.depth
-      local isBadLine, newAvailableHeight = isBad(vbox, height, availableHeight)
-      if isBadLine then return false, availableHeight end
+      if type(height) == "table" then height = height.length end
+      if height > availableHeight then return false, availableHeight end
+      local isBadLine, newAvailableHeight = isBad(vbox, availableHeight - height)
       if newAvailableHeight then availableHeight = newAvailableHeight end
-      break
+      if isBadLine then return false, availableHeight end
+      return true, availableHeight
     elseif vbox:isVglue() then
       height = height + vbox.height
     end
   end
-  if not foundVbox then return false, availableHeight end
-  if type(height) == "table" then height = height.length end
-  return height <= availableHeight, availableHeight
+  return false, availableHeight
 end
 
 function containsVbox (queue)
