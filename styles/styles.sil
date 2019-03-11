@@ -1,4 +1,4 @@
-\begin[papersize=13.5cm x 20.5cm,class=sections]{document}
+\begin[papersize=180mm x 240mm,class=sections]{document}
 
 \script[src=packages/styles]%
 \script[src=packages/xmltricks]%
@@ -6,16 +6,16 @@
 
 \set[parameter=document.lineskip,value=7pt + 2pt - 2pt]%
 
-\font[family=Awami Nastaliq, size=11pt, language=urd, script=Arab, features=+shrt=3]
+\font[family=Awami Nastaliq Beta v.1.190, size=11pt, language=urd, script=Arab, features=+shrt=3]
 
 \define[command=chapter:mark]{\font[size=2em]{\process}}
 
 \define[command=ssv:style]{%
-\font[family=Awami Nastaliq, size=11pt]%
+\font[family=Awami Nastaliq Beta v.1.190, size=11pt]%
 \set[parameter=document.parindent,value=1cm]%
 }
 \define[command=ssvLit:style]{%
-\font[family=Scheherazade, size=11pt]%
+\font[family=Scheherazade, size=14pt]%
 }
 
 % Char Styles
@@ -24,7 +24,7 @@
 \define[command=char-ft]{\process}
 \define[command=char-xt]{\process}
 \define[command=char-w]{\process}
-\define[command=char-qt]{\font[family=Scheherazade, size=14pt]{\process}}
+\define[command=char-qt]{\font[family=Scheherazade, size=16pt]{\process}}
 \define[command=char-zheb]{\font[family=Times New Roman]{\process}}
 \define[command=char-zeng]{\font[family=Times New Roman]{\process}}
 \define[command=char-zgrk]{\font[family=SBL Greek]{\process}}

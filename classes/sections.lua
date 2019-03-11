@@ -12,14 +12,14 @@ SILE.settings.declare({
 SILE.settings.declare({
   name = "sections.interlinearseparator",
   type = "string",
-  default = "#26BF8B",
+  default = "#a8ff80",
   help = "The color of the line separating the Interlinear and SSV Lit sections"
 })
 
 SILE.settings.declare({
   name = "sections.notesseparator",
   type = "string",
-  default = "#26BF8B",
+  default = "#a8ff80",
   help = "The color of the line separating the SSV and Notes sections"
 })
 
@@ -72,7 +72,8 @@ local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 local bidiBoxUpNodes
 
 function toArabic (number)
-  return string.gsub(number, '%d', function (str) return numbers[str] end)
+  -- return string.gsub(number, '%d', function (str) return numbers[str] end)
+  return number
 end
 
 function writeFile (file, data)
@@ -461,7 +462,7 @@ sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "lef
 
 SILE.registerCommand("foliostyle", function (options, content)
   SILE.call("font", {
-    family = "Awami Nastaliq",
+    family = "Awami Nastaliq Beta v.1.190",
     size = "12pt",
     language = "urd",
     script = "Arab"
@@ -1279,11 +1280,11 @@ SILE.registerCommand("note", function (options, content)
     })
     SILE.call("set", {
       parameter = "document.rskip",
-      value = "1cm"
+      value = "0.5cm"
     })
     SILE.call("set", {
       parameter = "current.parindent",
-      value = "-1cm"
+      value = "-0.5cm"
     })
     SILE.typesetter:pushHbox({
       notesNumber = notesNumber,
