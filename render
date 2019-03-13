@@ -24,9 +24,7 @@ fi
 lua preprocess.lua $@ || exit 1
 cd ..
 
-echo "return {side=\"right\",page=1}" > context.lua
-
-CHAPTERS=$(ls -v *.xml)
+CHAPTERS=$(ls *.xml)
 
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS

@@ -389,7 +389,10 @@ function renderChapter (section, content)
   end
 end
 
-sections:loadPackage("twoside", { oddPageMaster = "right", evenPageMaster = "left" })
+sections:loadPackage("twoside", {
+  oddPageMaster = context.side,
+  evenPageMaster = (context.side == "right") and "left" or "right"
+})
 
 SILE.registerCommand("foliostyle", function (options, content)
   SILE.call("font", {
@@ -916,9 +919,7 @@ function sections:init()
     + SILE.settings.get("sections.ssvlitskip")
     + SILE.settings.get("sections.ssvskip")
     + SILE.toPoints(SILE.settings.get("sections.notesskip"))
-  print("Page is "..SILE.toAbsoluteMeasurement(SILE.toMeasurement(100, '%ph')))
   SILE.scratch.sections.availableHeight = SILE.toAbsoluteMeasurement(SILE.toMeasurement(100 - 12, '%ph')) - deadspace
-  print("We have "..SILE.scratch.sections.availableHeight.." available")
   
   local ret = plain.init(self)
 

@@ -64,6 +64,8 @@ end
 --- -------------------------------------------------------------------
 -- Local, module wide, parameters
 local chapters = {}
+local firstPage = tonumber(args.firstPage) or 1
+local startSide = firstPage % 2 == 0 and "left" or "right"
 if args.verse then args.verse = tonumber(args.verse) end
 if args.chapter then args.chapter = tonumber(args.chapter) end
 if args.maxChapter or args.minChapter then
@@ -669,15 +671,13 @@ ssv = flip(ssv)
 
 if #chapters > 0 then
   for _, chapter in ipairs(chapters) do
-    if chapter ~= "merged" then
-      args.chapter = chapter
+    args.chapter = chapter
 
-      local together = combine({ inter, ssvLit, ssv })
-      local xml = base.deparse(together)
+    local together = combine({ inter, ssvLit, ssv })
+    local xml = base.deparse(together)
 
-      base.writeFile(outputDir .. "/" .. chapter .. ".xml", xml)
-      base.reset()
-    end
+    base.writeFile(outputDir .. "/" .. string.format("%03d", chapter) .. ".xml", xml)
+    base.reset()
   end
 else
   local together = combine({ inter, ssvLit, ssv })
@@ -685,3 +685,4 @@ else
 
   base.writeFile(outputDir .. "/" .. book .. ".xml", xml)
 end
+base.writeFile(outputDir .. "/" .. "context.lua", "return {side=\""..startSide.."\",page="..firstPage.."}")
