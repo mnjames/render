@@ -69,8 +69,6 @@ numbers["9"] = "۹"
 
 local footnoteMark = SU.utf8charfromcodepoint('U+0602')
 
-local bidiBoxUpNodes
-
 function toArabic (number)
   return string.gsub(number, '%d', function (str) return numbers[str] end)
 end
@@ -163,11 +161,7 @@ end
 
 function createSection ()
   return {
-    typesetter = SILE.defaultTypesetter {},
-    state = {
-      height = 0,
-      minimum = 0
-    }
+    typesetter = SILE.defaultTypesetter {}
   }
 end
 
@@ -185,20 +179,6 @@ function allTypesetters (fun)
     fun(section.typesetter, section, name)
   end
   SILE.typesetter = currentTypesetter
-end
-
-sections.state = {
-  currentSection = "content"
-}
-
-function resetState ()
-  for _, section in pairs(sections.types) do
-    section.lastState = nil
-    section.state = {
-      height = 0,
-      minimum = 0
-    }
-  end
 end
 
 function buildConstraints ()
@@ -385,7 +365,6 @@ function finishPage()
 end
 
 function doSwitch()
-  resetState()
   finishPage()
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
@@ -827,13 +806,6 @@ function shouldAddNextLine (content, availableHeight, isBad)
     end
   end
   return false, availableHeight
-end
-
-function containsVbox (queue)
-  for _, box in ipairs(queue) do
-    if box:isVbox() then return true end
-  end
-  return false
 end
 
 SILE.registerCommand("verse-section", function (options, content)
