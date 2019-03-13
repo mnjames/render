@@ -6,14 +6,30 @@ then
   exit 1
 fi
 
+POSITIONAL=()
+SILE_ARGS=""
 NEEDS_CONCATENATING=false
-for arg in $@
+while [[ $# -gt 0 ]]
 do
-  if [ $arg == "--maxChapter" ]
-  then
+  key="$1"
+  case $key in
+    -d|--debug)
+    SILE_ARGS="-d $2"
+    shift # past argument
+    shift # past value
+    ;;
+    --maxChapter)
     NEEDS_CONCATENATING=true
-  fi
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+  esac
 done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
 echo "Pre-processing files"
 cd preprocessing
@@ -29,9 +45,7 @@ CHAPTERS=$(ls *.xml)
 echo "Rendering PDFs"
 for CHAPTER in $CHAPTERS
 do
-  sile -I styles/styles.sil $CHAPTER
-  # sile -I styles/styles.sil $CHAPTER -d frames
-  # sile -I styles/styles.sil $CHAPTER -d typesetter
+  sile -I styles/styles.sil $CHAPTER $SILE_ARGS
 done
 
 if [ -d output/$1 ]; then

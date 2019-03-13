@@ -89,6 +89,7 @@ sections:loadPackage("build-interlinear")
 sections:loadPackage("rules")
 sections:loadPackage("bidi")
 sections:loadPackage("color")
+
 sections:defineMaster({
   id = "right",
   firstContentFrame = "content",
@@ -930,6 +931,15 @@ function sections:init()
   --   SILE.outputter:debugFrame(SILE.getFrame("ssv"))
   --   SILE.outputter:debugFrame(SILE.getFrame("notes"))
   -- end)
+
+  if SU.debugging("cropmarks") then
+    sections:loadPackage("cropmarks")
+    SILE.registerCommand("crop:header", function (o, c)
+      local info = SILE.masterFilename-- .. " - " .. date.date("%x %X") .. " -  " .. outcounter
+      SILE.typesetter:typeset(info)
+    end)
+    SILE.call("crop:setup", { papersize = "a4" })
+  end
 
   sections.mainTypesetter = SILE.typesetter
   sections.mainTypesetter:init(SILE.getFrame("content"))
