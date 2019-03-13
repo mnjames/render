@@ -73,6 +73,7 @@ verse defined in the data files.
     * Download `Awami Nastaliq` (Arabic font) from https://software.sil.org/awami/download/
     * Download `SBL_grk` (Greek) from http://www.bible-researcher.com/sblgreek.html
 	* Download `Scheherazade` (Arabic) from https://software.sil.org/scheherazade/download/
+	* Download `Awami Nastaliq Beta v.1.190` (Arabic font) from https://drive.google.com/open?id=1dCtweiLJefqgWhYKDaAnKebZ8hsocQxO (used temporarily to test new version of font)
 
 7. Install fonts:
     * Macintosh: Copy the `.ttf` (True Type Font) files to `/Library/Fonts`

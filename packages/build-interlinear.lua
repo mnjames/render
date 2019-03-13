@@ -126,7 +126,7 @@ SILE.registerCommand("item", function (options, content)
         top = typesetter.frame:top()
       end
       local buffer = SILE.settings.get("sections.borderbuffer")
-      SILE.outputter:pushColor(SILE.colorparser("#26BF8B"))
+      SILE.outputter:pushColor(SILE.colorparser("#a8ff80"))
       SILE.outputter.rule(typesetter.frame:left() - buffer, top, width + 2*buffer, bottom - top)
       SILE.outputter:popColor()
     else
