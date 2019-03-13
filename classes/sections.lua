@@ -156,6 +156,11 @@ sections:defineMaster({
 -- end
 local emptyFunction = function () end
 
+function leaveHmodeMiddleman (self, independent)
+  if self.holdContentMode then independent = true end
+  return SILE.defaultTypesetter.leaveHmode(self, independent)
+end
+
 function createSection ()
   return {
     typesetter = SILE.defaultTypesetter {},
@@ -196,21 +201,6 @@ function resetState ()
   end
 end
 
--- function setHeight(frame, section)
---   -- local height = sections.types[section].height
---   -- local measuredHeight = 0
---   -- local tState = sections.types[section].typesetter.state
---   -- for _, vbox in ipairs(tState.outputQueue) do
---   --   measuredHeight = measuredHeight + vbox.height + vbox.depth
---   -- end
---   -- print("Difference is "..(measuredHeight - height).." px")
-
---   -- if type(height) ~= "number" then
---   --   height = height.length + height.stretch
---   -- end
---   frame:constrain("height", measureHeight(section.typesetter.state.outputQueue))
--- end
-
 function buildConstraints ()
   local interlinearTypesetter = sections.types.interlinear.typesetter
   local ssvLitTypesetter = sections.types.ssvLit.typesetter
@@ -220,12 +210,6 @@ function buildConstraints ()
   local ssvLitFrame = ssvLitTypesetter.frame
   local ssvFrame = ssvTypesetter.frame
   local notesFrame = notesTypesetter.frame
-  -- local skip = SILE.settings.get("sections.sectionskip")
-  -- sections.types.interlinear.state.height = sections.types.interlinear.state.height + 10
-  -- setHeight(interlinearFrame, "interlinear")
-  -- setHeight(ssvLitFrame, "ssvLit")
-  -- setHeight(ssvFrame, "ssv")
-  -- setHeight(notesFrame, "notes")
   allTypesetters(function (typesetter, section, name)
     local height = measureHeight(typesetter.state.outputQueue)
     if height > 0 and name == "interlinear" then
@@ -364,23 +348,6 @@ function fixCursors ()
   end
 end
 
--- function addRule (typesetter)
---   if (#typesetter.state.nodes > 0 or #typesetter.state.outputQueue > 0) and typesetter ~= sections.types.notes.typesetter then
---     SILE.call("par")
---     local width
---     if typesetter == sections.types.interlinear.typesetter then
---       typesetter:pushVglue({height = 10})
---       width = "100%fw"
---     else
---       width = "-100%fw"
---     end
---     SILE.call("hrule", {
---       height = "1pt",
---       width = width
---     })
---   end
--- end
-
 function finishPage()
   if SILE.scratch.sections.chapterBegun then
     SILE.typesetter = sections.mainTypesetter
@@ -411,15 +378,6 @@ function finishPage()
           value = SILE.settings.get("interlinear.height")
         })
       end
-      -- if SILE.typesetter == sections.types.ssv.typesetter then
-      --   local str = "SSV Line: "
-      --   for _, box in ipairs(SILE.typesetter.state.outputQueue) do
-      --     local type = box:isVglue() and "G" or box:isVbox() and "B" or box:isPenalty() and "P" or "?"
-      --     str = str..type
-      --   end
-      --   print(str)
-      -- end
-      -- addRule(section.typesetter)
       SILE.typesetter:chuck()
       SILE.typesetter.frame:leave()
     end)
@@ -432,8 +390,6 @@ function doSwitch()
   SILE.typesetter = sections.mainTypesetter
   SILE.call("eject")
   SILE.call("par")
-  -- SILE.scratch.lastInterlinearBox = nil
-  -- SILE.scratch.lastInterlinearText = nil
 end
 
 function renderChapter (section, content)
@@ -450,10 +406,7 @@ function renderChapter (section, content)
         break
       end
     end
-    -- SILE.call("chapter:mark", nil, { chapter })
-    -- if not sections.initialPass then
     sections[section.."Chapter"] = nil
-    -- end
   end
 end
 
@@ -474,9 +427,6 @@ end)
 SILE.registerCommand(
   "verse",
   function (options, content)
-    -- SILE.typesetter:pushPenalty({
-    --   penalty = 3000
-    -- })
     SILE.call(
       "font",
       {size = "14pt"},
@@ -495,53 +445,6 @@ SILE.registerCommand(
     SILE.process(content)
   end
 )
-
--- function addBidifiedNodesToList ()
---   local nodes = SILE.typesetter.state.masterNodes
---   if not nodes or #SILE.typesetter.state.nodes == 0 then return end
---   local vboxes = bidiBoxUpNodes(SILE.typesetter)
---   for _, vbox in ipairs(vboxes) do
---     if vbox.nodes then
---       for _, node in ipairs(vbox.nodes) do table.insert(nodes, node) end
---     end
---   end
---   table.remove(nodes)
---   table.remove(nodes)
---   return nodes
--- end
-
--- function bidiBreak ()
---   if SILE.typesetter.state.masterNodes then
---     addBidifiedNodesToList()
---     SILE.typesetter.state.nodes = SILE.typesetter.state.masterNodes
---     SILE.typesetter:leaveHmode(1)
---     SILE.typesetter.state.masterNodes = {}
---   else
---     SILE.typesetter:leaveHmode(1)
---   end
--- end
-
--- function processWithBidi (content)
---   local nodes = SILE.typesetter.state.nodes
---   if #nodes > 0 then
---     SILE.typesetter:pushGlue"1spc"
---   end
---   SILE.typesetter:pushState()
---   SILE.typesetter.state.masterNodes = nodes
---   SILE.process(content)
---   local queue = SILE.typesetter.state.outputQueue
---   local previousVbox = SILE.typesetter.state.previousVbox
---   addBidifiedNodesToList()
---   nodes = SILE.typesetter.state.masterNodes
---   SILE.typesetter:popState()
---   if #queue > 0 then
---     for _, box in ipairs(queue) do
---       table.insert(SILE.typesetter.state.outputQueue, box)
---     end
---     SILE.typesetter.state.previousVbox = previousVbox
---   end
---   SILE.typesetter.state.nodes = nodes
--- end
 
 SILE.registerCommand("char", function (options, content)
   SILE.call("char-"..options.style, options, content)
@@ -573,7 +476,7 @@ end)
 
 SILE.registerCommand("para-end", function ()
   -- bidiBreak()
-  SILE.typesetter:leaveHmode(true)
+  SILE.typesetter:leaveHmode()
 end)
 
 SILE.registerCommand("optbreak", function ()
@@ -600,7 +503,8 @@ SILE.registerCommand("chapter", function (options, content)
           value = SILE.settings.get("interlinear.height")
         })
       end
-      SILE.typesetter:leaveHmode(true)
+      SILE.typesetter:leaveHmode()
+      SILE.typesetter.holdContentMode = nil
     end)
     section.queue = typesetter.state.outputQueue
     if name == "interlinear" or name == "ssvLit" or name == "ssv" then
@@ -932,156 +836,9 @@ function containsVbox (queue)
   return false
 end
 
--- function createCarryOver (overFill)
---   print("Overfull by "..overFill)
---   local maxVerse = 1000000
---   local carryOver = {
---     {
---       name = "ssv",
---       toNextPage = {},
---       numLinesToRemove = 0
---     },
---     {
---       name = "ssvLit",
---       toNextPage = {},
---       numLinesToRemove = 0
---     },
---     {
---       name = "interlinear",
---       toNextPage = {},
---       numLinesToRemove = 0
---     }
---   }
-
---   print("Carrying over unfinished lines")
---   for _, item in ipairs(carryOver) do
---     local tState = sections.types[item.name].typesetter.state
---     local state = sections.types[item.name].state
---     local chunks = state.chunks
---     if #tState.nodes > 0 then
---       local chunk = chunks[#chunks]
---       print("Automatically removing unfinished line")
---       item.numLinesToRemove = item.numLinesToRemove + 1
---       print("Subtracting", chunk.height)
---       overFill = overFill - chunk.height
---       state.height = state.height - chunk.height
---       if #chunk.verseContribution > 0 then
---         maxVerse = math.min(chunk.verseContribution[1] - 1, maxVerse)
---       end
---     end
---   end
-
---   local stillOverful = overFill > 0
---   while stillOverful do
---     local stillRemovingContent = false
---     for _, item in ipairs(carryOver) do
---       local state = sections.types[item.name].state
---       local chunks = state.chunks
---       local chunkIndex = #chunks - item.numLinesToRemove
---       -- if (chunks.firstChunkIsRemovable and chunkIndex > 0) or chunkIndex > 1 then
---       if chunkIndex > 0 then
---         local chunk = chunks[chunkIndex]
---         stillRemovingContent = true
---         item.numLinesToRemove = item.numLinesToRemove + 1
---         print("Subtracting", chunk.height)
---         overFill = overFill - chunk.height
---         state.height = state.height - chunk.height
---         if #chunk.verseContribution > 0 then
---           maxVerse = math.min(chunk.verseContribution[1] - 1, maxVerse)
---         end
---         if overFill <= 0 then
---           stillOverful = false
---           break
---         end
---         print("Still "..overFill.." to go")
---       end
---     end
---     if not stillRemovingContent then
---       print("No more content to remove, aborting!")
---       break
---     end
---   end
-  
---   for _, item in ipairs(carryOver) do
---     local tState = sections.types[item.name].typesetter.state
---     for lineIndex=1, item.numLinesToRemove do
---       if lineIndex == 1 and #tState.nodes > 0 then
---         item.nodeCarryOver = tState.nodes
---         tState.nodes = {}
---       else
---         local queue = tState.outputQueue
---         repeat
---           table.insert(item.toNextPage, 1, table.remove(queue))
---         until queue[#queue]:isVbox()
---       end
---     end
---     local sectionMaxVerse
---     for i=#tState.outputQueue, 1, -1 do
---       local vbox = tState.outputQueue[i]
---       if vbox.verseContribution and #vbox.verseContribution > 0 then
---         sectionMaxVerse = vbox.verseContribution[#vbox.verseContribution]
---         break
---       end
---     end
---     if sectionMaxVerse > maxVerse then
---       print(item.name.." begins verse "..sectionMaxVerse.." but is only allowed to begin "..maxVerse)
---     end
---   end
-
---   return carryOver
--- end
-
 SILE.registerCommand("verse-section", function (options, content)
   SILE.scratch.sections.sectionNumber = SILE.scratch.sections.sectionNumber + 1
   SILE.process(content)
-  -- for _, section in pairs(sections.types) do
-  --   local tState = section.typesetter.state
-  --   section.firstNewBoxIndex = #tState.outputQueue + 1
-  --   section.lastNodeLength = #tState.nodes
-  -- end
-
-
-  -- SILE.process(content)
-
-  -- local minimum = 0
-  -- local total = 0
-  -- for _, section in pairs(sections.types) do
-  --   total = total + section.state.height
-  --   minimum = minimum + section.state.minimum
-  -- end
-
-  -- local overFill = total - SILE.scratch.sections.availableHeight
-  -- if overFill > 0 then
-  --   if minimum > SILE.scratch.sections.availableHeight then
-  --     print("Can't even fit minimum!")
-  --   end
-  --   local carryOver = createCarryOver(overFill)
-
-  --   -- for sectionName, section in pairs(sections.types) do
-  --   --   print("Verse beginnings for "..sectionName)
-  --   --   for _, line in ipairs(section.typesetter.state.outputQueue) do
-  --   --     if line:isVbox() then
-  --   --       print(line.verseContribution)
-  --   --     end
-  --   --   end
-  --   -- end
-    
-  --   buildConstraints()
-  --   doSwitch()
-
-  --   for _, item in ipairs(carryOver) do
-  --     if item.nodeCarryOver then
-  --       local section = sections.types[item.name]
-  --       local tState = section.typesetter.state
-  --       local sState = section.state
-  --       tState.nodes = item.nodeCarryOver
-  --       for _, box in ipairs(item.toNextPage) do
-  --         table.insert(tState.outputQueue, box)
-  --         sState.height = sState.height + box.height + box.depth
-  --       end
-  --     end
-  --   end
-  -- end
 end)
 
 function findNextVBox (list, index)
@@ -1091,110 +848,6 @@ function findNextVBox (list, index)
   end
 end
 
--- function measureContribution (sectionName)
---   local section = sections.types[sectionName]
---   local firstNewBoxIndex = section.firstNewBoxIndex
---   local lastNodeLength = section.lastNodeLength
---   local isHardBreak = #SILE.typesetter.state.nodes == 0
---   SILE.typesetter:leaveHmode(1)
---   local tState = SILE.typesetter.state
---   if #tState.outputQueue == 0 then
---     section.lastState = section.state
---     section.state = {
---       height = section.lastState.height,
---       difference = 0,
---       minimum = section.lastState.height,
---       chunks = {}
---     }
---     return
---   end
-
---   local firstVbox, intermediaryIndex = findNextVBox(tState.outputQueue, firstNewBoxIndex)
---   local verseStartedOnNewLine = lastNodeLength == 0 or lastNodeLength >= #firstVbox.nodes - 3
-  
---   local minimum = section.state.height
---   if verseStartedOnNewLine then
---     local box
---     repeat
---       box = tState.outputQueue[firstNewBoxIndex]
---       firstNewBoxIndex = firstNewBoxIndex + 1
---       minimum = minimum + box.height + box.depth
---     until box:isVbox()
---   end
-
---   -- local height = SILE.pagebuilder.collateVboxes(tState.outputQueue).height
-
---   local height = 0
---   local chunkHeight = 0
---   local chunks = {
---     -- firstChunkIsRemovable = not verseStartedOnNewLine
---   }
---   -- local firstContributionIndex = intermediaryIndex
---   -- if not verseStartedOnNewLine then
---   --   firstContributionIndex = firstContributionIndex + 1
---   -- end
---   for index, vbox in ipairs(tState.outputQueue) do
---     chunkHeight = chunkHeight + vbox.height + vbox.depth
---     if vbox:isVbox() then
---       if not vbox.verseContribution then
---         local verseContribution = {}
---         for _, node in ipairs(vbox.nodes) do
---           if node.beginSection then
---             table.insert(verseContribution, node.beginSection)
---           end
---         end
---         vbox.verseContribution = verseContribution
---       end
-
---       height = height + chunkHeight
---       -- if index >= firstContributionIndex then
---       table.insert(chunks, {
---         height = chunkHeight,
---         verseContribution = vbox.verseContribution
---       })
---       -- end
---       chunkHeight = 0
---     end
---   end
---   -- print(sectionName, chunks)
-
---   if not isHardBreak then
---     local nodes = tState.outputQueue[#tState.outputQueue].nodes
---     table.remove(nodes)
---     table.remove(nodes)
-
---     tState.nodes = nodes
-
---     table.remove(tState.outputQueue)
---     while #tState.outputQueue > 0 and not tState.outputQueue[#tState.outputQueue]:isVbox() do
---       table.remove(tState.outputQueue)
---     end
---   end
-
---   local difference = height - section.state.height
---   section.lastState = section.state
---   section.state = {
---     height = height,
---     difference = difference,
---     minimum = minimum,
---     chunks = chunks
---   }
---   -- if sectionName == "ssvLit" then
---   --   print("Adding "..difference.." for a total of "..height)
---   --   if minimum > 0 then print(section.state) end
---   -- end
---   -- tState.previousVbox = tState.outputQueue[#tState.outputQueue]
--- end
-
-function table.contains(table, element)
-  for _, value in pairs(table) do
-    if value == element then
-      return true
-    end
-  end
-  return false
-end
-
 SILE.registerCommand("interlinear", function (options, content)
   SILE.typesetter = sections.types.interlinear.typesetter
   SILE.typesetter:pushHbox({
@@ -1202,14 +855,6 @@ SILE.registerCommand("interlinear", function (options, content)
     outputYourself = emptyFunction
   })
   SILE.process(content)
---   SILE.settings.temporarily(function ()
---     SILE.call("set", {
---       parameter = "document.lineskip",
---       value = SILE.settings.get("interlinear.height")
---     })
---     SILE.process(content)
---     measureContribution("interlinear")
---   end)
 end)
 
 SILE.registerCommand("ssv-lit", function (options, content)
@@ -1223,15 +868,12 @@ SILE.registerCommand("ssv-lit", function (options, content)
     })
     SILE.process(content)
   end)
-  -- processWithBidi(content)
-  -- measureContribution("ssvLit")
 end)
 
 SILE.registerCommand("ssv", function (options, content)
   SILE.typesetter = sections.types.ssv.typesetter
   SILE.settings.temporarily(function ()
     SILE.call("ssv:style")
-    -- SILE.settings.set("document.parindent", SILE.nodefactory.newGlue("1cm"))
     renderChapter("ssv", content)
     SILE.typesetter:pushHbox({
       beginSection = SILE.scratch.sections.sectionNumber,
@@ -1239,8 +881,6 @@ SILE.registerCommand("ssv", function (options, content)
     })
     SILE.process(content)
   end)
-  -- processWithBidi(content)
-  -- measureContribution("ssv")
 end)
 
 SILE.registerCommand("note", function (options, content)
@@ -1271,7 +911,6 @@ SILE.registerCommand("note", function (options, content)
   local oldTypesetter = SILE.typesetter
   SILE.typesetter = sections.types.notes.typesetter
   SILE.settings.temporarily(function ()
-    -- SILE.call("font", {size = "12pt"})
     SILE.call("font", {size = "9pt"})
     SILE.call("set", {
       parameter = "document.lineskip",
@@ -1291,7 +930,7 @@ SILE.registerCommand("note", function (options, content)
     })
     SILE.typesetter:typeset(mark)
     SILE.process(content)
-    SILE.typesetter:leaveHmode(true)
+    SILE.typesetter:leaveHmode()
   end)
   SILE.typesetter = oldTypesetter
 end)
@@ -1311,22 +950,6 @@ function sections:init()
   
   local ret = plain.init(self)
 
-  SILE.registerCommand("center", function (options, content)
-    SILE.settings.temporarily(function ()
-      SILE.settings.set("document.lskip", SILE.nodefactory.hfillGlue)
-      SILE.settings.set("document.rskip", SILE.nodefactory.hfillGlue)
-      SILE.settings.set("typesetter.parfillskip", SILE.nodefactory.zeroGlue)
-      SILE.settings.set("document.parindent", SILE.nodefactory.zeroGlue)
-      local space = SILE.length.parse("1spc")
-      space.stretch = 0
-      space.shrink = 0
-      SILE.settings.set("document.spaceskip", space)
-      SILE.process(content)
-      SILE.typesetter:leaveHmode(true)
-      SILE.documentState.documentClass.endPar(SILE.typesetter)
-    end)
-  end)
-
   -- SILE.typesetter:registerPageEndHook(function ()
   --   SILE.outputter:debugFrame(SILE.getFrame("interlinear"))
   --   SILE.outputter:debugFrame(SILE.getFrame("ssvLit"))
@@ -1338,7 +961,9 @@ function sections:init()
   sections.mainTypesetter:init(SILE.getFrame("content"))
   SILE.call("bidi-on")
   allTypesetters(function (typesetter, section, name)
-    SILE.typesetter:init(SILE.getFrame(name))
+    typesetter.leaveHmode = leaveHmodeMiddleman
+    typesetter.holdContentMode = true
+    typesetter:init(SILE.getFrame(name))
     if name ~= "interlinear" then SILE.call("bidi-on") end
   end)
   return ret
