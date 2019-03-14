@@ -50,7 +50,15 @@
 \center{\process}%
 }
 \define[command=para-s]{%
-\font[weight=800]%
+\font[size=14pt]%
+\center{\process}%
+}
+\define[command=para-s2]{%
+\font[size=13pt]%
+\center{\process}%
+}
+\define[command=para-s3]{%
+\font[size=13pt]%
 \center{\process}%
 }
 \define[command=para-toc1]{%
