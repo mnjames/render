@@ -15,7 +15,7 @@
 \set[parameter=document.parindent,value=1cm]%
 }
 \define[command=ssvLit:style]{%
-\font[family=Scheherazade, size=14pt]%
+\font[family=Scheherazade, size=12pt]%
 }
 
 % Char Styles
@@ -32,6 +32,7 @@
 
 % Para Styles
 \xmltricks:ignore{para-start}
+\xmltricks:ignore{para-is para-ip para-iq para-pb}%% These are ignored temporarily. Eventually we need these working.
 
 \define[command=para-mt]{%
 \skip[height=8pt]%

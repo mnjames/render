@@ -888,7 +888,7 @@ SILE.registerCommand("note", function (options, content)
   local oldTypesetter = SILE.typesetter
   SILE.typesetter = sections.types.notes.typesetter
   SILE.settings.temporarily(function ()
-    SILE.call("font", {size = "9pt"})
+    SILE.call("font", {size = "8pt"})
     SILE.call("set", {
       parameter = "document.lineskip",
       value = "0.7ex"
