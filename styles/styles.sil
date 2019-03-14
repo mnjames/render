@@ -27,7 +27,7 @@
 \define[command=char-qt]{\font[family=Scheherazade, size=16pt]{\process}}
 \define[command=char-zheb]{\font[family=Times New Roman]{\process}}
 \define[command=char-zeng]{\font[family=Times New Roman]{\process}}
-\define[command=char-zgrk]{\font[family=SBL Greek]{\process}}
+\define[command=char-zgrk]{\font[family=SBL Greek, features=+smcp]{\process}}
 \define[command=char-zarab]{\font[family=Scheherazade, size=14pt]{\process}}
 
 % Para Styles
