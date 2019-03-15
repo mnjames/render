@@ -906,6 +906,7 @@ SILE.registerCommand("note", function (options, content)
       outputYourself = emptyFunction
     })
     SILE.typesetter:typeset(mark)
+	SILE.typesetter:typeset(' ‌ ‌ ')
     SILE.process(content)
     SILE.typesetter:leaveHmode()
   end)
