@@ -638,6 +638,206 @@ function combine (xmls)
   return combined
 end
 
+-- https://github.com/starwing/luautf8,  install using "luarocks install luautf8"
+local utf8 = require 'lua-utf8'
+
+--- -------------------------------------------------------------------
+-- Given a string, convert any greek characters to uppercase.
+-- @param str a string
+-- @return string that contains only upper case greek letters
+-- @return number the number of replacements made in the string
+function greekToUpperCase (str)
+  -- source: https://github.com/vdw/Greek-string-to-uppercase/blob/master/MY_string_helper.php
+
+  -- local greek_letters = "[αβγδεζηθικλμνξοπρστυφχψωάέήίόύώΆΈΉΊΌΎΏϊϋς]"
+  local greek_letters = "[\u{0370}-\u{03FF}\u{1F00}-\u{1FFE}]"
+  local matching_letters =
+  { -- normal greek from 0370 to 03FF (decimal 880 to 1023)
+    ["ͱ"] = "Ͱ",
+    ["ͳ"] = "Ͳ",
+    ["ͷ"] = "Ͷ",
+    ["ͻ"] = "Ͻ",
+    ["ͼ"] = "Ͼ",
+    ["ͽ"] = "Ͽ",
+    ["ΐ"] = "Ϊ́",
+    ["ά"] = "Ά",
+    ["έ"] = "Έ",
+    ["ή"] = "Ή",
+    ["ί"] = "Ί",
+    ["ΰ"] = "Ϋ́",
+    ["α"] = "Α",
+    ["β"] = "Β",
+    ["γ"] = "Γ",
+    ["δ"] = "Δ",
+    ["ε"] = "Ε",
+    ["ζ"] = "Ζ",
+    ["η"] = "Η",
+    ["θ"] = "Θ",
+    ["ι"] = "Ι",
+    ["κ"] = "Κ",
+    ["λ"] = "Λ",
+    ["μ"] = "Μ",
+    ["ν"] = "Ν",
+    ["ξ"] = "Ξ",
+    ["ο"] = "Ο",
+    ["π"] = "Π",
+    ["ρ"] = "Ρ",
+    ["ς"] = "Σ",
+    ["σ"] = "Σ",
+    ["τ"] = "Τ",
+    ["υ"] = "Υ",
+    ["φ"] = "Φ",
+    ["χ"] = "Χ",
+    ["ψ"] = "Ψ",
+    ["ω"] = "Ω",
+    ["ϊ"] = "Ϊ",
+    ["ϋ"] = "Ϋ",
+    ["ό"] = "Ό",
+    ["ύ"] = "Ύ",
+    ["ώ"] = "Ώ",
+    ["ϐ"] = "Β",
+    ["ϑ"] = "Θ",
+    ["ϕ"] = "Φ",
+    ["ϖ"] = "Π",
+    ["ϗ"] = "Ϗ",
+    ["ϙ"] = "Ϙ",
+    ["ϛ"] = "Ϛ",
+    ["ϝ"] = "Ϝ",
+    ["ϟ"] = "Ϟ",
+    ["ϡ"] = "Ϡ",
+    ["ϣ"] = "Ϣ",
+    ["ϥ"] = "Ϥ",
+    ["ϧ"] = "Ϧ",
+    ["ϩ"] = "Ϩ",
+    ["ϫ"] = "Ϫ",
+    ["ϭ"] = "Ϭ",
+    ["ϯ"] = "Ϯ",
+    ["ϰ"] = "Κ",
+    ["ϱ"] = "Ρ",
+    ["ϲ"] = "Ϲ",
+    ["ϳ"] = "Ϳ",
+    ["ϵ"] = "Ε",
+    ["ϸ"] = "Ϸ",
+    ["ϻ"] = "Ϻ",
+    -- Greek extended from 0x1F00 to 1FFFE (decimal 7936 to 8190)
+    ["ἀ"] = "Ἀ",
+    ["ἁ"] = "Ἁ",
+    ["ἂ"] = "Ἂ",
+    ["ἃ"] = "Ἃ",
+    ["ἄ"] = "Ἄ",
+    ["ἅ"] = "Ἅ",
+    ["ἆ"] = "Ἆ",
+    ["ἇ"] = "Ἇ",
+    ["ἐ"] = "Ἐ",
+    ["ἑ"] = "Ἑ",
+    ["ἒ"] = "Ἒ",
+    ["ἓ"] = "Ἓ",
+    ["ἔ"] = "Ἔ",
+    ["ἕ"] = "Ἕ",
+    ["ἠ"] = "Ἠ",
+    ["ἡ"] = "Ἡ",
+    ["ἢ"] = "Ἢ",
+    ["ἣ"] = "Ἣ",
+    ["ἤ"] = "Ἤ",
+    ["ἥ"] = "Ἥ",
+    ["ἦ"] = "Ἦ",
+    ["ἧ"] = "Ἧ",
+    ["ἰ"] = "Ἰ",
+    ["ἱ"] = "Ἱ",
+    ["ἲ"] = "Ἲ",
+    ["ἳ"] = "Ἳ",
+    ["ἴ"] = "Ἴ",
+    ["ἵ"] = "Ἵ",
+    ["ἶ"] = "Ἶ",
+    ["ἷ"] = "Ἷ",
+    ["ὀ"] = "Ὀ",
+    ["ὁ"] = "Ὁ",
+    ["ὂ"] = "Ὂ",
+    ["ὃ"] = "Ὃ",
+    ["ὄ"] = "Ὄ",
+    ["ὅ"] = "Ὅ",
+    ["ὐ"] = "Υ̓",
+    ["ὑ"] = "Ὑ",
+    ["ὒ"] = "Υ̓̀",
+    ["ὓ"] = "Ὓ",
+    ["ὔ"] = "Υ̓́",
+    ["ὕ"] = "Ὕ",
+    ["ὖ"] = "Υ̓͂",
+    ["ὗ"] = "Ὗ",
+    ["ὠ"] = "Ὠ",
+    ["ὡ"] = "Ὡ",
+    ["ὢ"] = "Ὢ",
+    ["ὣ"] = "Ὣ",
+    ["ὤ"] = "Ὤ",
+    ["ὥ"] = "Ὥ",
+    ["ὦ"] = "Ὦ",
+    ["ὧ"] = "Ὧ",
+    ["ὰ"] = "Ὰ",
+    ["ά"] = "Ά",
+    ["ὲ"] = "Ὲ",
+    ["έ"] = "Έ",
+    ["ὴ"] = "Ὴ",
+    ["ή"] = "Ή",
+    ["ὶ"] = "Ὶ",
+    ["ί"] = "Ί",
+    ["ὸ"] = "Ὸ",
+    ["ό"] = "Ό",
+    ["ὺ"] = "Ὺ",
+    ["ύ"] = "Ύ",
+    ["ὼ"] = "Ὼ",
+    ["ώ"] = "Ώ",
+    ["ᾀ"] = "ἈΙ",
+    ["ᾁ"] = "ἉΙ",
+    ["ᾂ"] = "ἊΙ",
+    ["ᾃ"] = "ἋΙ",
+    ["ᾄ"] = "ἌΙ",
+    ["ᾅ"] = "ἍΙ",
+    ["ᾆ"] = "ἎΙ",
+    ["ᾇ"] = "ἏΙ",
+    ["ᾈ"] = "ἈΙ",
+    ["ᾉ"] = "ἉΙ",
+    ["ᾊ"] = "ἊΙ",
+    ["ᾋ"] = "ἋΙ",
+    ["ᾌ"] = "ἌΙ",
+    ["ᾍ"] = "ἍΙ",
+    ["ᾎ"] = "ἎΙ",
+    ["ᾏ"] = "ἏΙ"
+  }
+
+  local new_str, num_replacements
+  new_str, num_replacements = utf8.gsub(str, greek_letters, matching_letters)
+
+  return new_str, num_replacements
+end
+
+--- -------------------------------------------------------------------
+-- Convert all greek characters in the notes of the ssv to uppercase.
+-- @param o initially the ssv object; on recursion, any sub-table of the ssv
+function ssvNotesGeekToUpperCase(o)
+  local new_str, number_replacements
+  if type(o) == 'table' then
+    if o['tag'] == 'note' then
+      -- print('Note object: ', dump(o, 5))
+      for k,v in pairs(o) do
+        if type(v) == 'table' and v['tag'] == 'char' then
+          new_str, number_replacements = greekToUpperCase(v[1])
+          if number_replacements > 0 then
+            print("Converted: ", v[1], " to ", new_str );
+            v[1] = new_str;
+          end
+        end
+      end
+    else
+      -- this is a sub-table that is not a "notes"
+      for k,v in pairs(o) do
+        if type(v) == 'table' then
+          ssvNotesGeekToUpperCase(v)
+        end
+      end
+    end
+  end
+end
+
 --- -------------------------------------------------------------------
 -- Main program
 
@@ -645,6 +845,8 @@ end
 local inter  = lom.parse(base.readFile(inputDir .. "/Interlinear.xml"))
 local ssvLit = lom.parse(base.readFile(inputDir .. "/SSV_Lit.usx"))
 local ssv    = lom.parse(base.readFile(inputDir .. "/SSV.usx"))
+
+ssvNotesGeekToUpperCase (ssv);
 
 -- lua table structure:
 -- inter: inter[j]       is chapter j

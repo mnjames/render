@@ -42,7 +42,7 @@ The rendered document is stored in a `pdf` using the book's name. e.g. `output/J
 To render chapters of a book, specify the book folder name, the starting
 and ending chapters and the maximum number of verses per chapter:
 ```
-./render JHN --minChapter 3 --maxChapter 5 --verse 14`.
+./render JHN --minChapter 3 --maxChapter 5 --verse 14
 ```
 
 This will output the first 14 verses of chapters 3, 4 and 5 of `JHN` and
