@@ -2,7 +2,7 @@ SILE.registerCommand("interlinear:vernacular-font", function(options, content)
   SILE.call("font", {
     family = "Scheherazade",
     direction = "RTL",
-    size = "14pt",
+    size = "12pt",
     weight = 400
   })
 end)
@@ -10,7 +10,7 @@ end)
 SILE.registerCommand("interlinear:source-font", function(options, content)
   SILE.call("font", {
     family = "SBL Greek",
-    size = "12pt",
+    size = "10pt",
     weight = 800
   })
 end)

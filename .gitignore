@@ -2,6 +2,8 @@ books/*/*
 output/*/*
 resources/Lexicon.xml
 resources/lexicon-map.lua
+export_RL.sh
+export_SSV.sh
 
 # Ignore Mac files
 .DS_Store
